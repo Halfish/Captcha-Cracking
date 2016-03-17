@@ -20,7 +20,7 @@ python engine.py -t 2 -n 1000 -d ../synpic/type2
 th dump.lua -h
 
 -- dump 1000 type 2 picture for every font
-th dump.lua -persize 1000 -datadir ../synpic/type2 -savename type2_1000.dat
+th dump.lua -persize 1000 type 2 -datadir ../synpic/type2 -savename type2_1000.dat
 ```
 
 #### Step 3: Train the model
