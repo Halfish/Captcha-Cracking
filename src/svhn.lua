@@ -2,7 +2,6 @@ require 'nn'
 require 'nngraph'
 require 'optim'
 require 'gnuplot'
-require 'decoder'
 
 cmd = torch.CmdLine()
 cmd:text()
@@ -12,6 +11,7 @@ cmd:text("Options:")
 cmd:option('-gpuid', -1, 'id of gpu, negative values like -1 means using CPU')
 -- cmd:option('-threads', 2, 'number of threads')
 cmd:option('-model', '', 'using trained model')
+cmd:option('-type', 1, 'which type of CAPTCHA to train')
 cmd:option('-dropout', 0.5, 'prob of dropout for model')
 cmd:option('-savename', 'model.t7', 'the name of model to save')
 cmd:option('-dataname', 'fullset.dat', 'name of data set to load')
@@ -29,10 +29,20 @@ cmd:text()
 
 opt = cmd:parse(arg or {})
 
-data_util = require 'svhn_data'
-model_util = require 'svhn_model'
+
+decoder_util = require 'decoder'
+decoder = {}
+if opt.type == 1 then
+    decoder = decoder_util.create('../synpic/codec_type1.txt', 8)
+elseif opt.type == 2 then
+    decoder = decoder_util.create('../synpic/codec_type2.txt', 5)
+end
+-- print(decoder.label_size)
+-- print(decoder.ndigits)
+
 
 print("loading data...")
+data_util = require 'svhn_data'
 trainset, validset = data_util.getFullset(opt.dataname)
 print("trainset.size = ", trainset.size)
 print("validset.size = ", validset.size)
@@ -52,16 +62,22 @@ if opt.gpuid > 0 then
         opt.gpuid, freeMem/1000000, totalMem/1000000))
 end
 
-
+-- build a new model or use an existed model
+model_util = require 'svhn_model'
 model = nil
 if opt.model == '' then
     print("building CNN model...")
-    model = model_util.create(opt.dropout)
+    if opt.type == 1 then
+        model = model_util.createType1(opt.dropout)
+    elseif opt.type == 2 then
+        model = model_util.createType2(opt.dropout)
+    end
 else
     print("loading CNN model...")
     model = torch.load(opt.model)
 end
 
+-- use GPU or CPU
 if opt.gpuid > 0 then
     model = model:cuda()
 end
@@ -97,32 +113,32 @@ step = function(trainset)
             -- 1. calc loss
             local loss = pL[label[1] + 1]
             for j = 2, label[1]+1 do
-                local index = (j - 2) * 20 + label[j]
+                local index = (j - 2) * decoder.label_size + label[j]
                 loss = loss + pS[index]
             end
 
             -- 2. count correct labels
-            prediction = output2label(output)
-            if compareLabel(prediction, label) then
+            prediction = decoder:output2label(output)
+            if decoder:compareLabel(prediction, label) then
                 avg_accuracy = avg_accuracy + 1
             end
 
             -- 3. calc outputGrad for pL and pS
-            local l_grad = torch.Tensor(10):fill(0)
-            local s_grad = torch.Tensor(160):fill(0)
+            local l_grad = torch.Tensor(decoder.ndigits + 2):fill(0)
+            local s_grad = torch.Tensor(decoder.ndigits * decoder.label_size):fill(0)
             if opt.gpuid > 0 then
                 l_grad = l_grad:cuda()
                 s_grad = s_grad:cuda()
             end
             l_grad[label[1] + 1] = -1
             for j = 2, label[1]+1 do
-                local index = (j - 2) * 20 + label[j]
+                local index = (j - 2) * decoder.label_size + label[j]
                 s_grad[index] = -1
             end
 
             -- 4. backward the outputGrad
             dl_dx:zero()
-            local outputGrad = {l_grad, s_grad:reshape(8, 20)}
+            local outputGrad = {l_grad, s_grad:reshape(decoder.ndigits, decoder.label_size)}
             model:backward(input, outputGrad)
 
             return -loss, dl_dx
@@ -151,24 +167,17 @@ validate = function(validset)
         end
 
         local output = model:forward(input)
-        prediction = output2label(output)
-        if compareLabel(prediction, label) then
+        prediction = decoder:output2label(output)
+        if decoder:compareLabel(prediction, label) then
             avg_accuracy = avg_accuracy + 1
         end
-
-        -- print several examples about prediction and label
-        -- if i % demo_per_size == 0 then
-            --print("prediction: ", label2str(prediction))
-            -- print("label:\t", label2str(label))
-            -- print("")
-        -- end
 
         -- calc validation loss
         local pL = output[1]:storage() -- output of length L
         local pS = output[2]:storage() -- output of character S[1..L]
         local loss = pL[label[1] + 1]
         for j = 2, label[1]+1 do
-            local index = (j - 2) * 20 + label[j]
+            local index = (j - 2) * decoder.label_size + label[j]
             loss = loss + pS[index]
         end
         avg_loss = avg_loss + loss

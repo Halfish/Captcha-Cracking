@@ -1,27 +1,51 @@
 --[[
 
-This file offers some basic util functions to change several forms of label
+This Class 'decoder_util' offers some basic functions to change forms of label from one to another
 
-1. str: string format, which is also readable
-    str = '1加上3等于？'
+Bacally, there are three froms(if we assume self.label_size is 8):
 
-2. label: real label, Tensor format
-    label = {label_length, 1st, 2nd,..., 8th}
+    1. str: string format, which is also readable
+        str = '1加上3等于？'
 
-3. output: output Tensor for Torch, including two inner Tensors
-    output = {
-        pL: 10 Tensor, probability of length, 0,1,...,8,8+
-        pS: 20x8 Tensor, probability for 8 char selection
-    }
+    2. label: real label, Tensor format
+        label = {label_length, 1st, 2nd,..., 8th}
+
+    3. output: output Tensor for Torch, including two inner Tensors
+        output = {
+            pL: 10 Tensor, probability of length, 0,1,...,8,8+
+            pS: 20x8 Tensor, probability for 8 char selection
+        }
+
+    8 is the self.ndigits
+    20 is self.label_size, 20-classification problem for the model 
 
 ]]--
 
 require 'io'
 local path = require 'pl.path'
 
--- get inconsistent table from str, which may include chinese unicode character
--- inspired from https://github.com/zhangzibin/char-rnn-chinese
-function str2vocab(str)
+local decoder_util = {}     -- declare class decoder_util
+decoder_util.__index = decoder_util     -- just syntactic sugar
+
+function decoder_util.create(codec_dir, ndigits)
+    -- constructor for Class decoder_util
+    local self = {}
+    setmetatable(self, decoder_util)
+
+    self.mapper, self.rev_mapper = decoder_util.get_mapper(codec_dir)
+    -- self.label_size = #self.mapper -- this doesn't work
+    self.label_size = 0
+    for k, v in pairs(self.mapper) do
+        self.label_size = self.label_size + 1
+    end
+    self.ndigits = ndigits
+
+    return self
+end
+
+-- STATIC method, inspired by zhangzibin@github
+-- get table with vary length from str, which may include chinese unicode character
+function decoder_util.str2vocab(str)
     local vocab = {}
     local len  = #str
     local left = 0
@@ -46,13 +70,12 @@ function str2vocab(str)
     return vocab
 end
 
--- get chinese vocabulary mapper and rev_mapper from file
--- you can just print this to see what does it looks like
-function get_mapper(filename)
-    filename = filename or path.join('../synpic/', 'codec_type1.txt')
+-- STATIC method, get chinese vocabulary mapper and rev_mapper from file,
+-- you can just print mapper, and rev_mapper to see what does it looks like
+function decoder_util.get_mapper(filename)
     local file = io.open(filename, 'r')
     local str = file:read()
-    local vocab = str2vocab(str)
+    local vocab = decoder_util.str2vocab(str)
     local mapper = {}
     local rev_mapper = {}
     for i = 1, #vocab do
@@ -67,15 +90,12 @@ function get_mapper(filename)
     return mapper, rev_mapper
 end
 
--- static mapper and rev_mapper
-local s_mapper, s_rev_mapper = get_mapper()
-function str2label(str, mapper)
-    mapper = mapper or s_mapper
-    local label = str2vocab(str)
+function decoder_util:str2label(str)
+    local label = decoder_util.str2vocab(str)
     for i = 1, #label do
-        label[i] = mapper[label[i]]
+        label[i] = self.mapper[label[i]]
     end
-    local tensorLabel = torch.Tensor(9):fill(0)
+    local tensorLabel = torch.Tensor(self.ndigits + 1):fill(0)
     tensorLabel[1] = #label
     for i = 1, #label do
         tensorLabel[i+1] = label[i]
@@ -83,27 +103,16 @@ function str2label(str, mapper)
     return tensorLabel -- label is a table
 end
 
-function label2str(label, rev_mapper)
-    rev_mapper =  rev_mapper or s_rev_mapper
+function decoder_util:label2str(label)
     local str = ''
     for i = 1, label[1] do -- so label should be a table
-        str = str .. rev_mapper[label[i+1]]
+        str = str .. self.rev_mapper[label[i+1]]
     end
     return str
 end
 
--- using regular expression to change simple '1+1' into '1加上1等于？'
-function simple2str(simple)
-    str = simple
-    str = string.gsub(str, '+', '加上')
-    str = string.gsub(str, '-', '减去')
-    str = string.gsub(str, '*', '乘以')
-    str = string.gsub(str, '/', '除以')
-    return str .. '等于？'
-end
-
 -- parse network's output into standard label
-function output2label(output)
+function decoder_util:output2label(output)
     local prob_L = output[1]
     local prob_S, index = output[2]:max(2)
     prob_S = prob_S:reshape(prob_S:size(1))
@@ -111,7 +120,7 @@ function output2label(output)
     local max_prob = prob_L[1] -- max_prob = the prob of length being 0
     local length = 0 -- default length is zero
     local cul = 0
-    for i = 1, 8 do
+    for i = 1, self.ndigits do
         cul = prob_S[i] + cul
         if (cul + prob_L[i+1]) > max_prob then
             max_prob = cul + prob_L[i+1] 
@@ -119,7 +128,7 @@ function output2label(output)
         end
     end
 
-    local label = torch.Tensor(9):fill(0)
+    local label = torch.Tensor(self.ndigits + 1):fill(0)
     label[1] = length
     for i = 1, length do
         label[i+1] = index[i]
@@ -128,7 +137,7 @@ function output2label(output)
 end
 
 -- only if these two labels are the same will we return true
-function compareLabel(label1, label2)
+function decoder_util:compareLabel(label1, label2)
     -- compare length first
     if label1[1] ~= label2[1] then
         return false
@@ -140,3 +149,15 @@ function compareLabel(label1, label2)
     end
     return true
 end
+
+-- using regular expression to change simple '1+1' into '1加上1等于？'
+function decoder_util:simple2str(simple)
+    str = simple
+    str = string.gsub(str, '+', '加上')
+    str = string.gsub(str, '-', '减去')
+    str = string.gsub(str, '*', '乘以')
+    str = string.gsub(str, '/', '除以')
+    return str .. '等于？'
+end
+
+return decoder_util
