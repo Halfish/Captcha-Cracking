@@ -246,7 +246,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--type", default=1, type=int, help="which type of CAPTCHA to generate")
     parser.add_argument("-d", "--savedir", default="../synpic/temp/", help="directory to save the pictures")
     parser.add_argument("-f", "--fonts", default=getAllFonts(), help="choose which font to use")
-    parser.add_argument("-n", "--number", default=2, type=int, help="how many pictures to generate?")
+    parser.add_argument("-n", "--number", default=2, type=int, help="how many pictures to generate for every font?")
 
     feature = parser.add_mutually_exclusive_group(required=False)
     feature.add_argument("--verbose", dest='verbose', action='store_true', help="print verbose infomation")

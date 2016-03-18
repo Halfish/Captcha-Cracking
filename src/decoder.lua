@@ -151,13 +151,26 @@ function decoder_util:compareLabel(label1, label2)
 end
 
 -- using regular expression to change simple '1+1' into '1加上1等于？'
-function decoder_util:simple2str(simple)
+function decoder_util:simple2str_type1(simple)
     str = simple
     str = string.gsub(str, '+', '加上')
     str = string.gsub(str, '-', '减去')
     str = string.gsub(str, '*', '乘以')
     str = string.gsub(str, '/', '除以')
     return str .. '等于？'
+end
+
+-- using regular expression to change simple '1+1' into '壹加壹等于'
+lang_map = {'零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'}
+function decoder_util:simple2str_type2(simple)
+    str = simple
+    str = string.gsub(str, '+', '加')
+    str = string.gsub(str, '-', '减')
+    str = string.gsub(str, '*', '乘')
+    for i = 1, 10 do
+        str = string.gsub(str, (i-1), lang_map[i])
+    end
+    return str .. '等于'
 end
 
 return decoder_util
