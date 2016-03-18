@@ -37,6 +37,7 @@ elseif opt.type == 2 then
 elseif opt.type == 3 then
     data = torch.Tensor(fullset.size, 3, 53, 160)
     labels = torch.IntTensor(fullset.size, 5):fill(0)
+    decoder = decoder_util.create('../synpic/chisayings.txt', 4)
 end
 -- print(string.format("size of data:\n%s", #data))
 -- print(string.format("size of labels:\n%s", #labels))

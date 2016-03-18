@@ -17,6 +17,7 @@ Bacally, there are three froms(if we assume self.label_size is 8):
         }
 
     8 is the self.ndigits
+    10 is self.ndigits + 2(one for zero, the other for 8+)
     20 is self.label_size, 20-classification problem for the model 
 
 ]]--
@@ -74,7 +75,7 @@ end
 -- you can just print mapper, and rev_mapper to see what does it looks like
 function decoder_util.get_mapper(filename)
     local file = io.open(filename, 'r')
-    local str = file:read()
+    local str = file:read('*all')
     local vocab = decoder_util.str2vocab(str)
     local mapper = {}
     local rev_mapper = {}

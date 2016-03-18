@@ -29,5 +29,5 @@ th dump.lua -persize 1000 -datadir ../synpic/type2 -savename type2_1000.dat
 th svhn.lua -h
 
 -- using GPU-2 to train a CNN model from type1 CAPTCHA
-th svhn.lua -gpuid 2 -type 1 -dataname type1_data.dat -savename model_type1.tt
+th svhn.lua -gpuid 2 -type 1 -dataname type1_data.dat -savename model_type1.t7
 ```
