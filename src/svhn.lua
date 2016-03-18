@@ -36,9 +36,11 @@ if opt.type == 1 then
     decoder = decoder_util.create('../synpic/codec_type1.txt', 8)
 elseif opt.type == 2 then
     decoder = decoder_util.create('../synpic/codec_type2.txt', 5)
+elseif opt.type == 3 then
+    decoder = decoder_util.create('../synpic/chisayings.txt', 4)
 end
--- print(decoder.label_size)
--- print(decoder.ndigits)
+ -- print(decoder.label_size)
+ -- print(decoder.ndigits)
 
 
 print("loading data...")
@@ -71,6 +73,8 @@ if opt.model == '' then
         model = model_util.createType1(opt.dropout)
     elseif opt.type == 2 then
         model = model_util.createType2(opt.dropout)
+    elseif opt.type == 3 then
+        model = model_util.createType3(opt.dropout)
     end
 else
     print("loading CNN model...")
