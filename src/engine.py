@@ -57,7 +57,7 @@ def randomChiSaying():
                 line = unicode(line.strip(), 'utf-8')
                 ChiSayings.append(line)
         print(str(len(ChiSayings)) + ' Chinese Sayings detected!')
-    index = random.randint(0, len(ChiSayings))
+    index = random.randint(0, len(ChiSayings)-1)
     return ChiSayings[index]
 
 '''

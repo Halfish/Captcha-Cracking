@@ -76,6 +76,7 @@ end
 function decoder_util.get_mapper(filename)
     local file = io.open(filename, 'r')
     local str = file:read('*all')
+    -- str = string.gsub(str, '\n', '')
     local vocab = decoder_util.str2vocab(str)
     local mapper = {}
     local rev_mapper = {}
@@ -94,7 +95,12 @@ end
 function decoder_util:str2label(str)
     local label = decoder_util.str2vocab(str)
     for i = 1, #label do
-        label[i] = self.mapper[label[i]]
+        local index = self.mapper[label[i]]
+        if index == nil then
+            label[i] = -1
+        else
+            label[i] = index
+        end
     end
     local tensorLabel = torch.Tensor(self.ndigits + 1):fill(0)
     tensorLabel[1] = #label
@@ -107,7 +113,11 @@ end
 function decoder_util:label2str(label)
     local str = ''
     for i = 1, label[1] do -- so label should be a table
-        str = str .. self.rev_mapper[label[i+1]]
+        if label[i+1] == -1 then
+            str = str .. '*'
+        else
+            str = str .. self.rev_mapper[label[i+1]]
+        end
     end
     return str
 end

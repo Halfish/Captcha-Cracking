@@ -19,6 +19,8 @@ if opt.type == 1 then
     decoder = decoder_util.create('../synpic/codec_type1.txt', 8)
 elseif opt.type == 2 then
     decoder = decoder_util.create('../synpic/codec_type2.txt', 5)
+elseif opt.type == 3 then
+    decoder = decoder_util.create('../synpic/chisayings.txt', 4)
 end
 
 model = torch.load(opt.model)
@@ -46,6 +48,8 @@ for i = 1, opt.num do
         str = decoder:simple2str_type1(file:read())
     elseif opt.type == 2 then
         str = decoder:simple2str_type2(file:read())
+    elseif opt.type == 3 then
+        str = file:read()
     end
     local real_label = decoder:str2label(str)
     -- print("prediction label = ", pred_label)
