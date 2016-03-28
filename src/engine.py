@@ -69,11 +69,10 @@ example:
     ig.generateImage(string='1776', path='./1.jpg')
 '''
 class ImageGenerator(object):
-    def __init__(self, fontPath, fontSize=24, mag=1, size = (200, 50), bgColor = (200, 200, 200)):
+    def __init__(self, fontPath, fontSize=24, size = (200, 50), bgColor = (200, 200, 200)):
         '''
         declare and initialize private varians
         '''
-        self.mag = mag
         self.size = size
         self.fontPath = fontPath
         self.bgColor = bgColor
@@ -98,7 +97,7 @@ class ImageGenerator(object):
         pass
     pass
 
-    def randLine(self, num=30, length=12, color=100):
+    def randLine(self, num=30, length=12, color=-1):
         '''
         make some random line noises
         '''
@@ -111,21 +110,24 @@ class ImageGenerator(object):
             angle = random.randint(0, 360) * math.pi / 180
             x2 = x1 + length * math.cos(angle)
             y2 = y1 + length * math.sin(angle)
-            if color < 0: # mean randRGB
+            if color == -1: # mean randRGB
                 draw.line([(x1, y1), (x2, y2)], self.randRGB())
             else:
-                draw.line([(x1, y1), (x2, y2)], (color, color, color))
+                draw.line([(x1, y1), (x2, y2)], color)
             pass
         pass
 
     pass
 
-    def drawChar(self, text, angle=random.randint(-10, 10)):
+    def drawChar(self, text, angle=random.randint(-10, 10), color=-1):
         '''
         get a sub image with one specific character
         '''
         charImg = Image.new('RGBA', (int(self.fontSize * 1.3), int(self.fontSize * 1.3)))
-        ImageDraw.Draw(charImg).text((0, 0), text, font=self.font, fill=self.randRGB())
+        if color == -1:
+            ImageDraw.Draw(charImg).text((0, 0), text, font=self.font, fill=self.randRGB())
+        else:
+            ImageDraw.Draw(charImg).text((0, 0), text, font=self.font, fill=color)
         charImg = charImg.crop(charImg.getbbox())
         charImg = charImg.rotate(angle, Image.BILINEAR, expand=1)
         return charImg
@@ -144,29 +146,26 @@ class ImageGenerator(object):
             x = start + self.fontSize * i + random.randint(0, gap) * i
             y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-10, 10)
             self.image.paste(charImg, (x, y), charImg)
-        self.image = self.image.resize((int(self.size[0] * self.mag), int(self.size[1] * self.mag)), Image.BILINEAR)
         self.image.save(path)
     pass
 
 
 class Type2ImageGenerator(ImageGenerator):
-    def __init__(self, fontPath, fontSize=28, mag=1, size = (160, 53), bgColor = (255, 255, 255)):
-        super(Type2ImageGenerator, self).__init__(fontPath, fontSize, mag, size, bgColor)
+    def __init__(self, fontPath, fontSize=26, size = (160, 53), bgColor = (255, 255, 255)):
+        super(Type2ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
     pass
 
     def generateImage(self, strings = u'叁加陆等于', path='out.jpg'):
         self.image = Image.new('RGB', self.size, self.bgColor) # image must be initialized here
         self.randPoint()
         self.randLine(num=random.randint(15, 20), length=100, color=-1)
-        gap = 4
+        gap = 5 
         start = random.randint(0, 5)
         for i in range(0, len(strings)):
             charImg = self.drawChar(text=strings[i], angle=random.randint(-15, 15))
             x = start + self.fontSize * i + random.randint(1, gap) * i
             y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-10, 10)
             self.image.paste(charImg, (x, y), charImg)
-            self.image = self.image.resize((int(self.size[0] * self.mag), int(self.size[1] * self.mag)), Image.BILINEAR)
-            self.image = self.image.resize(self.size, Image.BILINEAR)
             self.image.save(path)
         pass
     pass
@@ -186,11 +185,34 @@ class Type3ImageGenerator(Type2ImageGenerator):
             x = start + self.fontSize * i + random.randint(1, gap) * i
             y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-6, 6)
             self.image.paste(charImg, (x, y), charImg)
-            self.image = self.image.resize((int(self.size[0] * self.mag), int(self.size[1] * self.mag)), Image.BILINEAR)
-            self.image = self.image.resize(self.size, Image.BILINEAR)
             self.image.save(path)
         pass
     pass
+
+class Type4ImageGenerator(ImageGenerator):
+    def __init__(self, fontPath, fontSize=26, size=(180, 40), bgColor = -1):
+        super(Type4ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
+    pass
+
+    def generateImage(self, strings = u'贰乘叁等于', path='out.jpg'):
+        background = self.bgColor
+        if self.bgColor == -1: 
+            background = (random.randint(200, 255), random.randint(200, 255), random.randint(200, 255))
+        self.image = Image.new('RGB', self.size, background) # image must be initialized here
+        self.randLine(num=random.randint(5, 8), length=100, color=-1)
+        self.randLine(num=random.randint(15, 20), length=10, color=(100, 100, 100))
+        gap = 1 
+        start = random.randint(15, 25)
+        for i in range(0, len(strings)):
+            charcolor = (random.randint(50, 180), random.randint(50, 180), random.randint(50, 180))
+            charImg = self.drawChar(text=strings[i], angle=random.randint(-15, 15), color=charcolor)
+            x = start + self.fontSize * i + random.randint(1, gap) * i
+            y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-6, 6)
+            self.image.paste(charImg, (x, y), charImg)
+            self.image.save(path)
+        pass
+    pass
+
 
 def syntheticData(args):
     if type(args.fonts) == str:
@@ -212,6 +234,8 @@ def syntheticData(args):
             ig = Type2ImageGenerator(font)
         elif args.type == 3:
             ig = Type3ImageGenerator(font)
+        elif args.type == 4 or args.type == 5:
+            ig = Type4ImageGenerator(font)
         fontname = font.split('.')[-2].split('/')[-1]
         for i in range(args.number):
             if args.number > 100 and i % (args.number / 10) == 0:
@@ -221,12 +245,12 @@ def syntheticData(args):
                 label = ''
                 if args.type == 1:
                     label = randomEquation(mode='en')
-                elif args.type == 2:
+                elif args.type == 2 or args.type == 4:
                     label = randomEquation(mode='chi')
-                elif args.type == 3:
+                elif args.type == 3 or args.type == 5:
                     label = randomChiSaying()
                 f.write(label.encode('utf-8')+ '\n')
-                filepath = os.path.join(args.savedir, fontname + str(i) + '.jpg')
+                filepath = os.path.join(args.savedir, fontname + str(i) + '.' + args.picformat)
                 ig.generateImage(strings=label, path=filepath)
             pass
         pass
@@ -247,6 +271,7 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--savedir", default="../synpic/temp/", help="directory to save the pictures")
     parser.add_argument("-f", "--fonts", default=getAllFonts(), help="choose which font to use")
     parser.add_argument("-n", "--number", default=2, type=int, help="how many pictures to generate for every font?")
+    parser.add_argument("-p", "--picformat", default="jpg", help="jpg or png? specific filename suffix")
 
     feature = parser.add_mutually_exclusive_group(required=False)
     feature.add_argument("--verbose", dest='verbose', action='store_true', help="print verbose infomation")
