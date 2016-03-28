@@ -22,6 +22,7 @@ Bacally, there are three froms(if we assume self.label_size is 8):
 
 ]]--
 
+require 'nn';
 require 'io'
 local path = require 'pl.path'
 
@@ -76,7 +77,7 @@ end
 function decoder_util.get_mapper(filename)
     local file = io.open(filename, 'r')
     local str = file:read('*all')
-    -- str = string.gsub(str, '\n', '')
+    str = string.gsub(str, '\n', '')
     local vocab = decoder_util.str2vocab(str)
     local mapper = {}
     local rev_mapper = {}
@@ -182,6 +183,36 @@ function decoder_util:simple2str_type2(simple)
         str = string.gsub(str, (i-1), lang_map[i])
     end
     return str .. '等于'
+end
+
+-- constrain the answer within the training examples for type3
+function decoder_util:find_best_match(output)
+    if self.train_distrib == nil then
+        print('creating train_distrib')
+        local file = io.open('../synpic/chisayings.txt', 'r')
+        local words = {}
+        for line in file:lines() do
+            words[#words + 1] = line
+        end
+        self.train_distrib = torch.Tensor(#words, self.label_size):fill(0)
+        for i = 1, #words do
+            local word = self.str2vocab(words[i])
+            for j = 1, #word do
+                local index = self.mapper[word[j]]
+                self.train_distrib[i][index] = 1
+            end
+        end
+        self.words = words
+    end
+    output = torch.exp(output[2])
+    output = output:sum(1):double()
+    output = output:expand(self.train_distrib:size())
+
+    local mlp = nn.CosineDistance()
+    local result = mlp:forward({output, self.train_distrib})
+    local _, i = result:max(1)
+    
+    return self.words[i[1]]
 end
 
 return decoder_util

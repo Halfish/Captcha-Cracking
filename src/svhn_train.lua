@@ -23,7 +23,6 @@ cmd:option('-momentum', 0.9,'momentum (SGD only)')
 cmd:option('-weightDecay', 1e-3,'weight Decay')
 cmd:option('-alpha', 0.95, 'alpha for optim.rmsprop')
 cmd:option('-max_epochs', 1000, 'maximum epchos')
-cmd:option('-validfreq', 1, 'epochs to do the validation')
 cmd:option('-savefreq', 100, 'epochs to save the model ')
 cmd:text()
 
@@ -52,16 +51,16 @@ print("validset.size = ", validset.size)
 if opt.gpuid > 0 then
     require 'cutorch'
     require 'cunn'
-    trainset.data = trainset.data:cuda()
-    trainset.labels = trainset.labels:cuda()
-    validset.data = validset.data:cuda()
-    validset.labels = validset.labels:cuda()
     print(cutorch.getDeviceCount(), "GPU devices detected")
     cutorch.setDevice(opt.gpuid)
     print("running on GPU", opt.gpuid)
     local freeMem, totalMem = cutorch.getMemoryUsage(opt.gpuid)
     print(string.format("GPU %d has %dM memory left, with %dM totally",
         opt.gpuid, freeMem/1000000, totalMem/1000000))
+    trainset.data = trainset.data:cuda()
+    trainset.labels = trainset.labels:cuda()
+    validset.data = validset.data:cuda()
+    validset.labels = validset.labels:cuda()
 end
 
 -- build a new model or use an existed model
@@ -74,7 +73,7 @@ if opt.model == '' then
     elseif opt.type == 2 then
         model = model_util.createType2(opt.dropout)
     elseif opt.type == 3 then
-        model = model_util.createType3(opt.dropout)
+        model = model_util.createType3(decoder.label_size, opt.dropout)
     end
 else
     print("loading CNN model...")
@@ -117,8 +116,10 @@ step = function(trainset)
             -- 1. calc loss
             local loss = pL[label[1] + 1]
             for j = 2, label[1]+1 do
-                local index = (j - 2) * decoder.label_size + label[j]
-                loss = loss + pS[index]
+                if label[j] ~= -1 then
+                    local index = (j - 2) * decoder.label_size + label[j]
+                    loss = loss + pS[index]
+                end
             end
 
             -- 2. count correct labels
@@ -181,8 +182,10 @@ validate = function(validset)
         local pS = output[2]:storage() -- output of character S[1..L]
         local loss = pL[label[1] + 1]
         for j = 2, label[1]+1 do
-            local index = (j - 2) * decoder.label_size + label[j]
-            loss = loss + pS[index]
+            if label[j] ~= -1 then
+                local index = (j - 2) * decoder.label_size + label[j]
+                loss = loss + pS[index]
+            end
         end
         avg_loss = avg_loss + loss
     end
@@ -193,32 +196,47 @@ validate = function(validset)
 end
 
 train_loss_tensor = torch.Tensor(opt.max_epochs):fill(0)
-valid_loss_tensor = torch.Tensor(opt.max_epochs / opt.validfreq):fill(0)
+valid_loss_tensor = torch.Tensor(opt.max_epochs):fill(0)
 train_accuracy_tensor = torch.Tensor(opt.max_epochs):fill(0)
-valid_accuracy_tensor = torch.Tensor(opt.max_epochs / opt.validfreq):fill(0)
---gnuplot.figure()
+valid_accuracy_tensor = torch.Tensor(opt.max_epochs):fill(0)
+
+local stoppingLR = opt.learningRate * 0.001
+local stopwatch = 0
+local last_v_loss = 100
+
 for i = 1, opt.max_epochs do
     local timer = torch.Timer()
+
     -- training
     model:training()
-    local minLR = opt.learningRate * 0.001
-    sgd_params.learningRate = opt.learningRate - i / opt.max_epochs * (opt.learningRate - minLR)
     local train_loss, train_accuracy = step(trainset)
-    print(string.format("epochs = %d,\tloss = %.4f, accuracy = %.4f, costs %.2fs",
-        i, train_loss, train_accuracy, timer:time().real))
     train_loss_tensor[i] = train_loss
     train_accuracy_tensor[i] = train_accuracy
-    --gnuplot.plot(loss_tensor[{{1, i}}])
 
     -- validating
-    if i % opt.validfreq == 0 then
-        model:evaluate()
-        local valid_loss, valid_accuracy = validate(validset)
-        valid_loss_tensor[i / opt.validfreq] = valid_loss
-        valid_accuracy_tensor[i / opt.validfreq] = valid_accuracy
-        print(string.format("   validset:\tloss = %.4f, accuracy = %.4f",
-            valid_loss, valid_accuracy))
+    model:evaluate()
+    local valid_loss, valid_accuracy = validate(validset)
+    valid_loss_tensor[i] = valid_loss
+    valid_accuracy_tensor[i] = valid_accuracy
+
+    print(string.format("epochs = %d,\tloss= %.3f, accu= %.3f, v_loss= %.3f, v_accu= %.3f, costs %.2fs",
+        i, train_loss, train_accuracy, valid_loss, valid_accuracy, timer:time().real))
+
+    -- cut the learning rate in half when valid_loss stops decreasing
+    if valid_loss > last_v_loss then
+        if stopwatch >= 3 then
+            if sgd_params.learningRate < stoppingLR then
+                break
+            else
+                sgd_params.learningRate = sgd_params.learningRate / 2
+                stopwatch = 0
+                print(string.format('new learning rate is %f', sgd_params.learningRate))
+            end
+        else
+            stopwatch = stopwatch + 1
+        end
     end
+    last_v_loss = valid_loss
 
     -- saving model
     if i % opt.savefreq == 0 then
@@ -226,18 +244,13 @@ for i = 1, opt.max_epochs do
         print(string.format("\nsaving model as %s\n", opt.savename))
         print("==================================")
         torch.save(opt.savename, model)
-        print("learningRate is:", sgd_params.learningRate)
+        print("saved, and learningRate is:", sgd_params.learningRate)
     end
 end
 
 -- print all information during the training process
 for i = 1, opt.max_epochs do
-    print(string.format("i = %d,\ttrain_loss = %.4f, train_accuracy = %.4f",
-        i, train_loss_tensor[i], train_accuracy_tensor[i]))
-
-    if i % opt.validfreq == 0 then
-        print(string.format('\tvalid_loss = %.4f, valid_accuracy = %.4f ',
-            valid_loss_tensor[i / opt.validfreq],
-            valid_accuracy_tensor[i / opt.validfreq]))
-    end
+    print(string.format("i = %d,\tloss= %.3f, accu= %.3f, v_loss= %.3f, v_accu= %.3f",
+        i, train_loss_tensor[i], train_accuracy_tensor[i],
+        valid_loss_tensor[i], valid_accuracy_tensor[i]))
 end
