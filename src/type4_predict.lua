@@ -19,7 +19,7 @@ local model_symb = torch.load(model_symb_name)
 function eval(picpath)
     -- step 2: split source picture into alpha, beta and gamma
     --      depending on file cutAndDump.py
-    local command = 'python ./cutAndDump.py ' .. opt.province .. ' -f single -p ' .. picpath 
+    local command = 'python ./type4_cut.py ' .. opt.province .. ' -f single -p ' .. picpath 
     os.execute(command)
 
     -- step 3: read alpha, beta, and gamma

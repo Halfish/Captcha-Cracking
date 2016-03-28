@@ -15,7 +15,7 @@ cmd:option('-datpath', 'type4_chq_num.dat', 'directory of training data')
 cmd:option('-splitrate', 0.7, 'split rate for training and validation')
 cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj]')
 cmd:option('-type', 'num', 'which model to use? num or symb')
-cmd:option('-maxiters', 100, 'maximum iterations to train')
+cmd:option('-maxiters', 300, 'maximum iterations to train')
 cmd:text()
 opt = cmd:parse(arg or {})
 
@@ -151,7 +151,7 @@ do
     for i = 1, opt.maxiters do
         local loss = step()
         local accuracy = eval(validset)
-        if i % 20 == 0 then
+        if i % 10 == 0 then
             print(string.format('Epoch: %d loss = %4f\t valid_accu = %4f', i, loss, accuracy))
         end
         if accuracy < last_accuracy then

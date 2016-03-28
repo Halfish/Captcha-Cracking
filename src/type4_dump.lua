@@ -1,7 +1,7 @@
 --[[
 --  Usage: Dump pictures from labeled data for type4
 --  for example:
---      th type4_dump -province nx -typename num -picdir ../synpic/type4 
+--      th type4_dump -province nx -typename num -picdir ../trainpic/type4 
 --]]--
 require 'image'
 
