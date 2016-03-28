@@ -171,19 +171,49 @@ def tianjin():
         pass
     pass
 
+def preprocess_jx(n_img, n_alpha, n_beta, n_gamma):
+    img = cv2.imread(n_img)
+    bBlur = cv2.bilateralFilter(img, 9, 175, 175)
+    ret, thresh = cv2.threshold(bBlur, 127, 255, cv2.THRESH_BINARY)
+    alpha = thresh[3:33, 13:38]
+    beta = thresh[0:35, 35:70]
+    gamma = thresh[3:33, 65:90]
+    alpha = cv2.cvtColor(alpha, cv2.COLOR_BGR2GRAY)
+    beta = cv2.cvtColor(beta, cv2.COLOR_BGR2GRAY)
+    gamma = cv2.cvtColor(gamma, cv2.COLOR_BGR2GRAY)
+    cv2.imwrite(n_alpha, alpha)
+    cv2.imwrite(n_beta, beta)
+    cv2.imwrite(n_gamma, gamma)
+
+def jiangxi():
+    num = 99
+    label_path = '../trainpic/type4/jiangxi/label.txt'
+    pic_dir = '../trainpic/type4/jiangxi/'
+    save_dir = '../trainpic/type4/'
+    with open(label_path, 'r') as f:
+        labels = f.readlines()
+        for i in range(num):
+            n_img = os.path.join(pic_dir, str(i+1) + '.jpg')
+            n_alpha = os.path.join(save_dir, 'jx_'+ str(i+1) + '_1_' + labels[i][0] + '.png')
+            n_beta= os.path.join(save_dir, 'jx_'+ str(i+1) + '_2_' + labels[i][1] + '.png')
+            n_gamma = os.path.join(save_dir, 'jx_'+ str(i+1) + '_3_' + labels[i][2] + '.png')
+            preprocess_jx(n_img, n_alpha, n_beta, n_gamma)
+        pass
+    pass
+
 if __name__ == '__main__':
     parser =argparse.ArgumentParser()
-    parser.add_argument('province', choices=['chq', 'gs', 'nx', 'tj'], help='which province to choice')
+    parser.add_argument('province', choices=['chq', 'gs', 'nx', 'tj', 'jx'], help='which province to choice')
     parser.add_argument('-f', '--function', choices=['single', 'dump'], default='dump', 
                         help='cut single picture or dump data')
     parser.add_argument('-p', '--imgpath', help='image path to read from')
     args = parser.parse_args()
     if args.function == 'dump':
-        mapper = {'chq':chongqing, 'gs':gansu, 'nx':ningxia, 'tj':tianjin}
+        mapper = {'chq':chongqing, 'gs':gansu, 'nx':ningxia, 'tj':tianjin, 'jx':jiangxi}
         f = mapper[args.province]
         f()
     elif args.function == 'single':
-        mapper = {'chq':preprocess_chq, 'gs':preprocess_gs, 'nx':preprocess_nx, 'tj':preprocess_tj}
+        mapper = {'chq':preprocess_chq, 'gs':preprocess_gs, 'nx':preprocess_nx, 'tj':preprocess_tj, 'jx':preprocess_jx}
         f = mapper[args.province]
         f(args.imgpath, 'alpha.png', 'beta.png', 'gamma.png')
     pass

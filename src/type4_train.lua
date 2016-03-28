@@ -13,7 +13,7 @@ cmd:text()
 cmd:text("Options:")
 cmd:option('-datpath', 'type4_chq_num.dat', 'directory of training data')
 cmd:option('-splitrate', 0.7, 'split rate for training and validation')
-cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj]')
+cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx]')
 cmd:option('-type', 'num', 'which model to use? num or symb')
 cmd:option('-maxiters', 300, 'maximum iterations to train')
 cmd:text()
@@ -41,11 +41,23 @@ validset.data = validset.data - validset.data:mean()
 -- step 2: building cnn model
 if opt.model == 'chq' or opt.model == 'nx' or opt.model == 'tj' then
     channel = 1
-    img_size = 30
+    img_size_x = 30
+    img_size_y = 30
 elseif opt.model == 'gs' then
     channel = 3
-    img_size = 18
+    img_size_x = 18
+    img_size_y = 18
+elseif opt.model == 'jx' then
+    channel = 1
+    if opt.type == 'num' then
+        img_size_x = 30
+        img_size_y = 25
+    elseif opt.type == 'symb' then
+        img_size_x = 35
+        img_size_y = 35
+    end
 end
+print('input image size = ', channel, img_size_x, img_size_y)
 
 if opt.type == 'num' then
     nclass = 10 -- 10 digits to classify, '[0-9]'
@@ -56,14 +68,15 @@ end
 kernel_num = 10
 kernel_size = 5
 model = nn.Sequential()
-model:add(nn.View(channel, img_size, img_size))
+model:add(nn.View(channel, img_size_x, img_size_y))
 model:add(nn.SpatialConvolutionMM(channel, kernel_num, kernel_size, kernel_size))
 model:add(nn.ReLU())
 model:add(nn.SpatialMaxPooling(2, 2, 2, 2, 0, 0))
-local num1 = math.floor((img_size - 4) / 2)
-local num2 = kernel_num * num1 * num1
-model:add(nn.View(num2))
-model:add(nn.Linear(num2, nclass * 10))
+local num1 = math.floor((img_size_x - 4) / 2)
+local num2 = math.floor((img_size_y - 4) / 2)
+local num3 = kernel_num * num1 * num2
+model:add(nn.View(num3))
+model:add(nn.Linear(num3, nclass * 10))
 model:add(nn.ReLU())
 model:add(nn.Linear(nclass * 10, nclass))
 model:add(nn.LogSoftMax())
@@ -88,7 +101,7 @@ step = function(batch_size)
     for t = 1, trainset.size, batch_size do
         -- setup inputs and targets for this mini-batch
         local size = math.min(t + batch_size - 1, trainset.size) - t 
-        local inputs = torch.Tensor(size, channel, img_size, img_size)--:cuda()
+        local inputs = torch.Tensor(size, channel, img_size_x, img_size_y)--:cuda()
         --local inputs = torch.Tensor(size, 30, 30)--:cuda()
         local targets = torch.Tensor(size)--:cuda()
         for i = 1,size do

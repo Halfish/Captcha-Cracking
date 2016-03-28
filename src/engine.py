@@ -51,7 +51,7 @@ def randomChiSaying():
     generate a random chinese saying from txt
     '''
     if len(ChiSayings) == 0:        # load data first
-        filepath = '../synpic/chisayings.txt'
+        filepath = '../trainpic/chisayings.txt'
         with open(filepath, 'r') as f:
             for line in f.readlines():
                 line = unicode(line.strip(), 'utf-8')
@@ -189,9 +189,9 @@ class Type3ImageGenerator(Type2ImageGenerator):
         pass
     pass
 
-class Type4ImageGenerator(ImageGenerator):
+class Type5ImageGenerator(ImageGenerator):
     def __init__(self, fontPath, fontSize=26, size=(180, 40), bgColor = -1):
-        super(Type4ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
+        super(Type5ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
     pass
 
     def generateImage(self, strings = u'贰乘叁等于', path='out.jpg'):
@@ -234,8 +234,9 @@ def syntheticData(args):
             ig = Type2ImageGenerator(font)
         elif args.type == 3:
             ig = Type3ImageGenerator(font)
-        elif args.type == 4 or args.type == 5:
-            ig = Type4ImageGenerator(font)
+            # no type4 here
+        elif args.type == 5 or args.type == 6:
+            ig = Type5ImageGenerator(font)
         fontname = font.split('.')[-2].split('/')[-1]
         for i in range(args.number):
             if args.number > 100 and i % (args.number / 10) == 0:
@@ -245,9 +246,9 @@ def syntheticData(args):
                 label = ''
                 if args.type == 1:
                     label = randomEquation(mode='en')
-                elif args.type == 2 or args.type == 4:
+                elif args.type == 2 or args.type == 5:
                     label = randomEquation(mode='chi')
-                elif args.type == 3 or args.type == 5:
+                elif args.type == 3 or args.type == 6:
                     label = randomChiSaying()
                 f.write(label.encode('utf-8')+ '\n')
                 filepath = os.path.join(args.savedir, fontname + str(i) + '.' + args.picformat)
@@ -268,7 +269,7 @@ def getAllFonts(fontdir = '../fonts/'):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--type", default=1, type=int, help="which type of CAPTCHA to generate")
-    parser.add_argument("-d", "--savedir", default="../synpic/temp/", help="directory to save the pictures")
+    parser.add_argument("-d", "--savedir", default="../trainpic/temp/", help="directory to save the pictures")
     parser.add_argument("-f", "--fonts", default=getAllFonts(), help="choose which font to use")
     parser.add_argument("-n", "--number", default=2, type=int, help="how many pictures to generate for every font?")
     parser.add_argument("-p", "--picformat", default="jpg", help="jpg or png? specific filename suffix")
