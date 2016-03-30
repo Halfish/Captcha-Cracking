@@ -13,7 +13,7 @@ cmd:text()
 cmd:text("Options:")
 cmd:option('-datpath', 'type4_chq_num.dat', 'directory of training data')
 cmd:option('-splitrate', 0.7, 'split rate for training and validation')
-cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx]')
+cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx, small]')
 cmd:option('-type', 'num', 'which model to use? num or symb')
 cmd:option('-maxiters', 300, 'maximum iterations to train')
 cmd:text()
@@ -55,6 +55,15 @@ elseif opt.model == 'jx' then
     elseif opt.type == 'symb' then
         img_size_x = 35
         img_size_y = 35
+    end
+elseif opt.model == 'small' then
+    channel = 1
+    if opt.type == 'num' then
+        img_size_x = 15
+        img_size_y = 11
+    elseif opt.type == 'symb' then
+        img_size_x = 16
+        img_size_y = 16
     end
 end
 print('input image size = ', channel, img_size_x, img_size_y)

@@ -69,5 +69,8 @@ end
 if opt.picpath == '' then
     standard_test()
 else
-    eval(opt.picpath)
+    local output = eval(opt.picpath)
+    print(string.format('pred = %s, avg_accu = %4f',
+        output[1][1] .. ' ' .. output[2][1] .. ' ' .. output[3][1], 
+        (output[1][2] + output[2][2] + output[3][2]) / 3))
 end

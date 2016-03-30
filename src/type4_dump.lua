@@ -16,15 +16,15 @@ end
 -- define arguments
 local cmd = torch.CmdLine()
 cmd:text()
-cmd:option('-province', 'nx', 'which province to choice? [chq, gs, nx, tj, jx]')
+cmd:option('-province', 'nx', 'which province to choice? [chq, gs, nx, tj, jx, small]')
 cmd:option('-typename', 'num', 'num or symb')
 cmd:option('-picdir', '../trainpic/type4/', 'directory of pictures to train')
 cmd:text()
 local opt = cmd:parse(arg or {})
 
-local size = 99
+local size = 200
 if opt.typename == 'num' then
-    size = 198
+    size = 400
 end
 
 -- define regular expression
@@ -45,6 +45,12 @@ elseif opt.province == 'jx' then
     elseif opt.typename == 'symb' then
         data = torch.Tensor(size, 1, 35, 35)
     end
+elseif opt.province == 'small' then
+    if opt.typename == 'num' then
+        data = torch.Tensor(size, 1, 15, 11)
+    elseif opt.typename == 'symb' then
+        data = torch.Tensor(size, 1, 16, 16)
+    end
 elseif opt.province == 'chq' or opt.province == 'nx' or opt.province == 'tj' then
     data = torch.Tensor(size, 1, 30, 30)
 end
@@ -61,12 +67,17 @@ for file in paths.iterfiles(opt.picdir) do
         elseif opt.typename == 'symb' then
             label[i] = codec_mapper[l]
         end
-        if i == num then
+        if i == size then
             break
         else
             i = i + 1
         end
     end
+end
+
+if i ~= size then
+    print(string.format('i = %d, size = %d', i, size))
+    print('inconsistent size of data, may not efficient pictures')
 end
 
 -- dump data
