@@ -60,6 +60,19 @@ def randomChiSaying():
     index = random.randint(0, len(ChiSayings)-1)
     return ChiSayings[index]
 
+alphabeta = 'ABCDEFGHJKLMNPQRSTUVWXYZ' # no 'I' or 'O'
+alphabeta = alphabeta + '123456789' # no '0'
+
+def randomAlphaNum(num = 4):
+    num = num or 4
+    strings = ''
+    for i in range(4):
+        index = random.randint(0, len(alphabeta) - 1)
+        char = alphabeta[index]
+        strings = strings + char
+    return strings
+
+
 '''
 generate a random image with Class ImageGenerator
 
@@ -116,7 +129,6 @@ class ImageGenerator(object):
                 draw.line([(x1, y1), (x2, y2)], color)
             pass
         pass
-
     pass
 
     def drawChar(self, text, angle=random.randint(-10, 10), color=-1):
@@ -131,6 +143,20 @@ class ImageGenerator(object):
         charImg = charImg.crop(charImg.getbbox())
         charImg = charImg.rotate(angle, Image.BILINEAR, expand=1)
         return charImg
+    pass
+
+    def distort(self, dim, A, w, fei):
+        fei = random.random() * 2 * math.pi
+        retImg = Image.new('RGB', self.size) # black background
+        data_ori = list(self.image.getdata())
+        data_ret = list(retImg.getdata())
+        width, height = self.image.size
+        for x in range(width):
+            for y in range(height):
+                new_x = x + int(A * math.sin(w * y + fei))
+                if new_x >= 0 and new_x <= (width - 1):
+                    data_ret[y * width + new_x] = data_ori[y * width + x]
+        self.image.putdata(data_ret)
     pass
 
     def generateImage(self, strings = u'8除以6等于？', path='out.jpg'):
@@ -166,8 +192,7 @@ class Type2ImageGenerator(ImageGenerator):
             x = start + self.fontSize * i + random.randint(1, gap) * i
             y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-10, 10)
             self.image.paste(charImg, (x, y), charImg)
-            self.image.save(path)
-        pass
+        self.image.save(path)
     pass
 
 class Type3ImageGenerator(Type2ImageGenerator):
@@ -185,8 +210,7 @@ class Type3ImageGenerator(Type2ImageGenerator):
             x = start + self.fontSize * i + random.randint(1, gap) * i
             y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-6, 6)
             self.image.paste(charImg, (x, y), charImg)
-            self.image.save(path)
-        pass
+        self.image.save(path)
     pass
 
 class Type5ImageGenerator(ImageGenerator):
@@ -209,14 +233,33 @@ class Type5ImageGenerator(ImageGenerator):
             x = start + self.fontSize * i + random.randint(1, gap) * i
             y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-6, 6)
             self.image.paste(charImg, (x, y), charImg)
-            self.image.save(path)
+        self.image.save(path)
+    pass
+
+class Type9ImageGenerator(ImageGenerator):
+    def __init__(self, fontPath, fontSize = 46, size=(150, 50), bgColor = 255):
+        super(Type9ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
+    pass
+
+    def generateImage(self, strings = u'7URT', path='out.jpg'):
+        self.image = Image.new('RGB', self.size, (255, 255, 255)) # image must be initialized here
+        self.randLine(num=20, length=15, color=0)
+        gap = 6
+        x = random.randint(32, 35)
+        for i in range(0, len(strings)):
+            charImg = self.drawChar(text=strings[i], angle=0, color=(0, 0, 0))
+            y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(5, 6)
+            self.image.paste(charImg, (x, y), charImg)
+            x = x + charImg.size[1] - gap
         pass
+        self.distort(0, 8, math.pi / 50, 0)
+        self.image.save(path)
     pass
 
 
 def syntheticData(args):
     if type(args.fonts) == str:
-        args.fonts = [str]
+        args.fonts = [args.fonts]
     if not os.path.isdir(args.savedir):
         os.mkdir(args.savedir)
         print('mkdir ' + args.savedir)
@@ -237,6 +280,8 @@ def syntheticData(args):
             # no type4 here
         elif args.type == 5 or args.type == 6:
             ig = Type5ImageGenerator(font)
+        elif args.type == 9:
+            ig = Type9ImageGenerator(font)
         fontname = font.split('.')[-2].split('/')[-1]
         for i in range(args.number):
             if args.number > 100 and i % (args.number / 10) == 0:
@@ -250,6 +295,8 @@ def syntheticData(args):
                     label = randomEquation(mode='chi')
                 elif args.type == 3 or args.type == 6:
                     label = randomChiSaying()
+                elif args.type == 9:
+                    label = randomAlphaNum()
                 f.write(label.encode('utf-8')+ '\n')
                 filepath = os.path.join(args.savedir, fontname + str(i) + '.' + args.picformat)
                 ig.generateImage(strings=label, path=filepath)
