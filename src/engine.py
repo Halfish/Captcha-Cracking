@@ -185,7 +185,7 @@ class Type2ImageGenerator(ImageGenerator):
         self.image = Image.new('RGB', self.size, self.bgColor) # image must be initialized here
         self.randPoint()
         self.randLine(num=random.randint(15, 20), length=100, color=-1)
-        gap = 5 
+        gap = 5
         start = random.randint(0, 5)
         for i in range(0, len(strings)):
             charImg = self.drawChar(text=strings[i], angle=random.randint(-15, 15))
@@ -220,12 +220,12 @@ class Type5ImageGenerator(ImageGenerator):
 
     def generateImage(self, strings = u'贰乘叁等于', path='out.jpg'):
         background = self.bgColor
-        if self.bgColor == -1: 
+        if self.bgColor == -1:
             background = (random.randint(200, 255), random.randint(200, 255), random.randint(200, 255))
         self.image = Image.new('RGB', self.size, background) # image must be initialized here
         self.randLine(num=random.randint(5, 8), length=100, color=-1)
         self.randLine(num=random.randint(15, 20), length=10, color=(100, 100, 100))
-        gap = 1 
+        gap = 1
         start = random.randint(15, 25)
         for i in range(0, len(strings)):
             charcolor = (random.randint(50, 180), random.randint(50, 180), random.randint(50, 180))
@@ -244,7 +244,7 @@ class Type9ImageGenerator(ImageGenerator):
     def generateImage(self, strings = u'7URT', path='out.jpg'):
         self.image = Image.new('RGB', self.size, (255, 255, 255)) # image must be initialized here
         self.randLine(num=20, length=15, color=0)
-        gap = 6
+        gap = 5
         x = random.randint(32, 35)
         for i in range(0, len(strings)):
             charImg = self.drawChar(text=strings[i], angle=0, color=(0, 0, 0))
@@ -252,7 +252,7 @@ class Type9ImageGenerator(ImageGenerator):
             self.image.paste(charImg, (x, y), charImg)
             x = x + charImg.size[1] - gap
         pass
-        self.distort(0, 8, math.pi / 50, 0)
+        self.distort(0, random.randint(3, 8), math.pi / 50, 0)
         self.image.save(path)
     pass
 

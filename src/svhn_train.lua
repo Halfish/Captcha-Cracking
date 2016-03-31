@@ -264,6 +264,9 @@ end
 
 -- print all information during the training process
 for i = 1, opt.max_epochs do
+    if train_loss_tensor[i] < 0.0000001 then
+        break
+    end
     print(string.format("i = %d,\tloss= %.3f, accu= %.3f, v_loss= %.3f, v_accu= %.3f",
         i, train_loss_tensor[i], train_accuracy_tensor[i],
         valid_loss_tensor[i], valid_accuracy_tensor[i]))
