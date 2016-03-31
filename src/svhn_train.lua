@@ -32,11 +32,13 @@ opt = cmd:parse(arg or {})
 decoder_util = require 'decoder'
 decoder = {}
 if opt.type == 1 then
-    decoder = decoder_util.create('../synpic/codec_type1.txt', 8)
+    decoder = decoder_util.create('../trainpic/codec_type1.txt', 8)
 elseif opt.type == 2 then
-    decoder = decoder_util.create('../synpic/codec_type2.txt', 5)
+    decoder = decoder_util.create('../trainpic/codec_type2.txt', 5)
 elseif opt.type == 3 then
-    decoder = decoder_util.create('../synpic/chisayings.txt', 4)
+    decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
+elseif opt.type == 9 then
+    decoder = decoder_util.create('../trainpic/codec_type9.txt', 4)
 end
  -- print(decoder.label_size)
  -- print(decoder.ndigits)
@@ -66,6 +68,16 @@ end
 -- build a new model or use an existed model
 model_util = require 'svhn_model'
 model = nil
+model_config = {
+    picsize = {3, 50, 150},
+    n_conv_layers = 3,  -- n_conv_layers == (#filter_num) - 1
+    filter_num = {3, 4, 8, 16},
+    filter_size = 5,
+    dropout_value = 0.5,
+    n_full_connect = 512,
+    ndigits = 4,
+    label_size = decoder.label_size,
+}
 if opt.model == '' then
     print("building CNN model...")
     if opt.type == 1 then
@@ -74,6 +86,8 @@ if opt.model == '' then
         model = model_util.createType2(opt.dropout)
     elseif opt.type == 3 then
         model = model_util.createType3(decoder.label_size, opt.dropout)
+    elseif opt.type == 9 then
+        model = model_util.create(model_config)
     end
 else
     print("loading CNN model...")
