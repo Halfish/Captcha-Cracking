@@ -5,6 +5,7 @@ cmd:option('-type', 1, 'Which type to predict?')
 cmd:option('-model', '../models/model_mix_12.t7', 'Which model to use?')
 cmd:option('-testdir', '../testpic/type1/', 'test directory')
 cmd:option('-num', 100, 'number')
+cmd:option('-format', '.jpg', 'jpg or png?')
 opt = cmd:parse(arg or {})
 
 require 'image'
@@ -16,7 +17,7 @@ local decoder_util = require 'decoder'
 local decoder
 if opt.type == 1 then
     decoder = decoder_util.create('../trainpic/codec_type1.txt', 8)
-elseif opt.type == 2 then
+elseif opt.type == 2 or opt.type == 5 then
     decoder = decoder_util.create('../trainpic/codec_type2.txt', 5)
 elseif opt.type == 3 then
     decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
@@ -30,13 +31,14 @@ model:evaluate()
 file = io.open(path.join(opt.testdir, 'label.txt'), 'r')
 local accuracy = 0.0
 for i = 1, opt.num do
-    local img = image.load(path.join(opt.testdir, i .. '.jpg'), 1)
+    local img = image.load(path.join(opt.testdir, i .. opt.format))
     if opt.type == 9 then
+        img = image.load(path.join(opt.testdir, i .. opt.format), 1)
         k = image.gaussian(3)
         img = image.convolve(img, k, 'same')
         img[img:lt(0.99)] = 0
         img[img:ge(0.99)] = 1
-        img2 = image.load(path.join(opt.testdir, i .. '.jpg'), 3)
+        img2 = image.load(path.join(opt.testdir, i .. opt.format), 3)
         img2[1] = img
         img2[2] = img
         img2[3] = img
@@ -58,7 +60,7 @@ for i = 1, opt.num do
     local str = ''
     if opt.type == 1 then
         str = decoder:simple2str_type1(file:read())
-    elseif opt.type == 2 then
+    elseif opt.type == 2 or opt.type == 5 then
         str = decoder:simple2str_type2(file:read())
     elseif opt.type == 3 or opt.type == 9 then
         str = file:read()

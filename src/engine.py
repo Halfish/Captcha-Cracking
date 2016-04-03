@@ -283,6 +283,7 @@ def syntheticData(args):
         elif args.type == 9:
             ig = Type9ImageGenerator(font)
         fontname = font.split('.')[-2].split('/')[-1]
+        print('generate data for font ' + fontname)
         for i in range(args.number):
             if args.number > 100 and i % (args.number / 10) == 0:
                 print i*100/args.number, "%..."

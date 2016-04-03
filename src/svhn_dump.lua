@@ -9,6 +9,7 @@ cmd:option('-type', 1, 'Which type of captcha to dump?')
 cmd:option('-persize', 10, 'How many pictures to dump for every font?')
 cmd:option('-datadir', '../trainpic/type1/', 'Where to find pictures to dump?')
 cmd:option('-savename', 'fullset.dat', 'save the dataset as ...')
+cmd:option('-format', '.jpg', 'jpg or png?')
 cmd:text()
 local opt = cmd:parse(arg or {})
 
@@ -38,6 +39,14 @@ elseif opt.type == 3 then
     data = torch.Tensor(fullset.size, 3, 53, 160)
     labels = torch.IntTensor(fullset.size, 5):fill(0)
     decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
+elseif opt.type == 5 then
+    data = torch.Tensor(fullset.size, 3, 40, 180)
+    labels = torch.IntTensor(fullset.size, 6):fill(0)
+    decoder = decoder_util.create('../trainpic/codec_type2.txt', 5)
+elseif opt.type == 6 then
+    data = torch.Tensor(fullset.size, 3, 40, 180)
+    labels = torch.IntTensor(fullset.size, 5):fill(0)
+    decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
 elseif opt.type == 9 then
     data = torch.Tensor(fullset.size, 3, 50, 150)
     labels = torch.IntTensor(fullset.size, 5):fill(0)
@@ -50,8 +59,9 @@ for i = 1, opt.persize do
         print(i / opt.persize * 100 .. "% finished") -- progress bar
     end
     for j = 1, #fonts do
-        local img = image.load(path.join(opt.datadir, fonts[j] .. i-1 .. '.jpg'), 3)
+        local img = image.load(path.join(opt.datadir, fonts[j] .. i-1 .. opt.format), 3)
         if opt.type == 9 then
+            -- type 9 needs preprocess
             k = image.gaussian(3)
             img = image.convolve(img, k, 'same')
             img[img:lt(0.5)] = 0

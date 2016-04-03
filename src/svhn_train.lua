@@ -33,9 +33,9 @@ decoder_util = require 'decoder'
 decoder = {}
 if opt.type == 1 then
     decoder = decoder_util.create('../trainpic/codec_type1.txt', 8)
-elseif opt.type == 2 then
+elseif opt.type == 2 or opt.type == 5 then
     decoder = decoder_util.create('../trainpic/codec_type2.txt', 5)
-elseif opt.type == 3 then
+elseif opt.type == 3 or opt.type == 6 then
     decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
 elseif opt.type == 9 then
     decoder = decoder_util.create('../trainpic/codec_type9.txt', 4)
@@ -73,7 +73,7 @@ model_config = {
     n_conv_layers = 3,  -- n_conv_layers == (#filter_num) - 1
     filter_num = {3, 4, 8, 16},
     filter_size = 5,
-    dropout_value = 0.5,
+    dropout_value = opt.dropout,
     n_full_connect = 512,
     ndigits = 4,
     label_size = decoder.label_size,
@@ -86,6 +86,10 @@ if opt.model == '' then
         model = model_util.createType2(opt.dropout)
     elseif opt.type == 3 then
         model = model_util.createType3(decoder.label_size, opt.dropout)
+    elseif opt.type == 5 then
+        model = model_util.createType5()
+    elseif opt.type == 6 then
+        model = model_util.createType6()
     elseif opt.type == 9 then
         model = model_util.create(model_config)
     end
