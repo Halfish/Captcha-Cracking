@@ -13,8 +13,8 @@ cmd:text()
 cmd:text("Options:")
 cmd:option('-datpath', 'type4_chq_num.dat', 'directory of training data')
 cmd:option('-splitrate', 0.7, 'split rate for training and validation')
-cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx, small]')
-cmd:option('-type', 'num', 'which model to use? num or symb')
+cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx, small, hb]')
+cmd:option('-type', 'num', 'which model to use? num or symb or single')
 cmd:option('-maxiters', 300, 'maximum iterations to train')
 cmd:text()
 opt = cmd:parse(arg or {})
@@ -65,6 +65,10 @@ elseif opt.model == 'small' then
         img_size_x = 16
         img_size_y = 16
     end
+elseif opt.model == 'hb' then
+    channel = 3
+    img_size_x = 22
+    img_size_y = 40
 end
 print('input image size = ', channel, img_size_x, img_size_y)
 
@@ -72,6 +76,10 @@ if opt.type == 'num' then
     nclass = 10 -- 10 digits to classify, '[0-9]'
 elseif opt.type == 'symb' then
     nclass = 3  -- 2 or 3 symbols to classify, '[+-*]' 
+elseif opt.type == 'single' then
+    decoder_util = require 'decoder'
+    decoder = decoder_util.create('../trainpic/chisayings.txt', 1)
+    nclass = decoder.label_size + 1
 end
 
 kernel_num = 10

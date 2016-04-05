@@ -60,6 +60,11 @@ def randomChiSaying():
     index = random.randint(0, len(ChiSayings)-1)
     return ChiSayings[index]
 
+def randomChiChar():
+    saying = randomChiSaying()
+    index = random.randint(0, 3)
+    return saying[index]
+
 alphabeta = 'ABCDEFGHJKLMNPQRSTUVWXYZ' # no 'I' or 'O'
 alphabeta = alphabeta + '123456789' # no '0'
 
@@ -73,15 +78,14 @@ def randomAlphaNum(num = 4):
     return strings
 
 
-'''
-generate a random image with Class ImageGenerator
-
-example:
-    from generator import ImageGenerator
-    ig = ImageGenerator()
-    ig.generateImage(string='1776', path='./1.jpg')
-'''
 class ImageGenerator(object):
+    '''
+    generate a random image with Class ImageGenerator
+    example:
+        from generator import ImageGenerator
+        ig = ImageGenerator()
+        ig.generateImage(string='1776', path='./1.jpg')
+    '''
     def __init__(self, fontPath, fontSize=24, size = (200, 50), bgColor = (200, 200, 200)):
         '''
         declare and initialize private varians
@@ -214,6 +218,11 @@ class Type3ImageGenerator(Type2ImageGenerator):
     pass
 
 class Type5ImageGenerator(ImageGenerator):
+    '''
+    share code with type 6 iamge generator
+    type 5 looks like type 2
+    type 6 looks like type 3
+    '''
     def __init__(self, fontPath, fontSize=26, size=(180, 40), bgColor = -1):
         super(Type5ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
     pass
@@ -256,6 +265,24 @@ class Type9ImageGenerator(ImageGenerator):
         self.image.save(path)
     pass
 
+class Type10ImageGenerator(ImageGenerator):
+    '''
+    single chinese character
+    '''
+    def __init__(self, fontPath, fontSize=22, size=(22, 40), bgColor = -1):
+        super(Type10ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
+    pass
+
+    def generateImage(self, strings = u'闻', path='out.jpg'):
+        self.image = Image.new('RGB', self.size, (255, 255, 255)) # image must be initialized here
+        lineColor = random.randint(100, 200)
+        self.randLine(num=random.randint(5, 10), length=10, color=(lineColor, lineColor, lineColor))
+        charcolor = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        charImg = self.drawChar(text=strings, angle=0, color=charcolor)
+        y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-10, 10)
+        self.image.paste(charImg, (random.randint(0, 1), y), charImg)
+        self.image.save(path)
+    pass
 
 def syntheticData(args):
     if type(args.fonts) == str:
@@ -282,6 +309,8 @@ def syntheticData(args):
             ig = Type5ImageGenerator(font)
         elif args.type == 9:
             ig = Type9ImageGenerator(font)
+        elif args.type == 10:
+            ig = Type10ImageGenerator(font)
         fontname = font.split('.')[-2].split('/')[-1]
         print('generate data for font ' + fontname)
         for i in range(args.number):
@@ -298,6 +327,8 @@ def syntheticData(args):
                     label = randomChiSaying()
                 elif args.type == 9:
                     label = randomAlphaNum()
+                elif args.type == 10:
+                    label = randomChiChar()
                 f.write(label.encode('utf-8')+ '\n')
                 filepath = os.path.join(args.savedir, fontname + str(i) + '.' + args.picformat)
                 ig.generateImage(strings=label, path=filepath)
@@ -313,6 +344,7 @@ def getAllFonts(fontdir = '../fonts/'):
             fonts.append(os.path.join(fontdir, font))
     print str(len(fonts)) + ' fonts detected!'
     return fonts
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
