@@ -245,6 +245,27 @@ class Type5ImageGenerator(ImageGenerator):
         self.image.save(path)
     pass
 
+class Type8ImageGenerator(ImageGenerator):
+    def __init__(self, fontPath, fontSize = 22, size=(300, 50), bgColor = 255):
+        super(Type8ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
+    pass
+
+    def generateImage(self, strings = u'陆加上2等于几', path='out.jpg'):
+        self.image = Image.new('RGB', self.size, (255, 255, 255)) # image must be initialized here
+        lineColor = random.randint(180, 210)
+        self.randLine(num=300, length=10, color=(lineColor, lineColor, lineColor))
+        gap = 1
+        x = random.randint(12, 15)
+        for i in range(0, len(strings)):
+            charImg = self.drawChar(text=strings[i], angle=0, color=(0, 0, 0))
+            y = (self.image.size[1] - charImg.size[1]) / 2 - 2
+            self.image.paste(charImg, (x, y), charImg)
+            x = x + charImg.size[1] - gap
+        pass
+        self.image.save(path)
+    pass
+
+
 class Type9ImageGenerator(ImageGenerator):
     def __init__(self, fontPath, fontSize = 46, size=(150, 50), bgColor = 255):
         super(Type9ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
@@ -253,7 +274,7 @@ class Type9ImageGenerator(ImageGenerator):
     def generateImage(self, strings = u'7URT', path='out.jpg'):
         self.image = Image.new('RGB', self.size, (255, 255, 255)) # image must be initialized here
         self.randLine(num=20, length=15, color=0)
-        gap = 5
+        gap = 5 
         x = random.randint(32, 35)
         for i in range(0, len(strings)):
             charImg = self.drawChar(text=strings[i], angle=0, color=(0, 0, 0))
@@ -274,13 +295,17 @@ class Type10ImageGenerator(ImageGenerator):
     pass
 
     def generateImage(self, strings = u'闻', path='out.jpg'):
+        self.fontSize = self.fontSize + random.randint(-1, 1)
+        self.font = ImageFont.truetype(self.fontPath, self.fontSize)
         self.image = Image.new('RGB', self.size, (255, 255, 255)) # image must be initialized here
         lineColor = random.randint(100, 200)
         self.randLine(num=random.randint(5, 10), length=10, color=(lineColor, lineColor, lineColor))
-        charcolor = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        charcolor = (random.randint(0, 200), random.randint(0, 200), random.randint(0, 200))
         charImg = self.drawChar(text=strings, angle=0, color=charcolor)
         y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-10, 10)
-        self.image.paste(charImg, (random.randint(0, 1), y), charImg)
+        x = (self.image.size[0] - charImg.size[0]) / 2
+        x = x if x > 0 else 0
+        self.image.paste(charImg, (x, y), charImg)
         self.image.save(path)
     pass
 
@@ -307,10 +332,12 @@ def syntheticData(args):
             # no type4 here
         elif args.type == 5 or args.type == 6:
             ig = Type5ImageGenerator(font)
+        elif args.type == 8:
+            ig = Type8ImageGenerator(font)
         elif args.type == 9:
             ig = Type9ImageGenerator(font)
         elif args.type == 10:
-            ig = Type10ImageGenerator(font)
+            ig = Type10ImageGenerator(font, args.fontsize)
         fontname = font.split('.')[-2].split('/')[-1]
         print('generate data for font ' + fontname)
         for i in range(args.number):
@@ -325,6 +352,8 @@ def syntheticData(args):
                     label = randomEquation(mode='chi')
                 elif args.type == 3 or args.type == 6:
                     label = randomChiSaying()
+                elif args.type == 8:
+                    label = randomEquation()
                 elif args.type == 9:
                     label = randomAlphaNum()
                 elif args.type == 10:
@@ -351,6 +380,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--type", default=1, type=int, help="which type of CAPTCHA to generate")
     parser.add_argument("-d", "--savedir", default="../trainpic/temp/", help="directory to save the pictures")
     parser.add_argument("-f", "--fonts", default=getAllFonts(), help="choose which font to use")
+    parser.add_argument("-fs", "--fontsize", default=24, type=int, help="specify font size")
     parser.add_argument("-n", "--number", default=2, type=int, help="how many pictures to generate for every font?")
     parser.add_argument("-p", "--picformat", default="jpg", help="jpg or png? specific filename suffix")
 
