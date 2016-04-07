@@ -60,9 +60,9 @@ if opt.gpuid > 0 then
     print(string.format("GPU %d has %dM memory left, with %dM totally",
         opt.gpuid, freeMem/1000000, totalMem/1000000))
     trainset.data = trainset.data:cuda()
-    trainset.labels = trainset.labels:cuda()
+    trainset.label = trainset.label:cuda()
     validset.data = validset.data:cuda()
-    validset.labels = validset.labels:cuda()
+    validset.label = validset.label:cuda()
 end
 
 -- build a new model or use an existed model
@@ -120,7 +120,7 @@ step = function(trainset)
     local shuffle = torch.randperm(trainset.size)
     for i = 1, trainset.size do
         local input = trainset.data[shuffle[i]]
-        local label = trainset.labels[shuffle[i]]
+        local label = trainset.label[shuffle[i]]
         if opt.gpuid > 0 then
             input = input:cuda()
             label = label:cuda()
@@ -140,7 +140,7 @@ step = function(trainset)
                 end
             end
 
-            -- 2. count correct labels
+            -- 2. count correct label
             prediction = decoder:output2label(output)
             if decoder:compareLabel(prediction, label) then
                 avg_accuracy = avg_accuracy + 1
@@ -183,7 +183,7 @@ validate = function(validset)
     local shuffle = torch.randperm(validset.size)
     for i = 1, validset.size do
         local input = validset.data[shuffle[i]]
-        local label = validset.labels[shuffle[i]]
+        local label = validset.label[shuffle[i]]
         if opt.gpuid > 0 then
             input = input:cuda()
             label = label:cuda()

@@ -31,8 +31,8 @@ function data_util.getFullset(name, split_rate)
     validset.size = fullset.size - trainset.size
     trainset.data = fullset.data[{{1, trainset.size}}]
     validset.data = fullset.data[{{1 + trainset.size, fullset.size}}]
-    trainset.labels = fullset.labels[{{1, trainset.size}}]
-    validset.labels = fullset.labels[{{1 + trainset.size, fullset.size}}]
+    trainset.label = fullset.label[{{1, trainset.size}}]
+    validset.label = fullset.label[{{1 + trainset.size, fullset.size}}]
 
     return trainset, validset
 end

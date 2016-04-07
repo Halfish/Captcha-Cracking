@@ -11,11 +11,13 @@ require 'math';
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text("Options:")
+cmd:option('-gpuid', -1, 'which GPU to choose, -1 means using CPU')
 cmd:option('-datpath', 'type4_chq_num.dat', 'directory of training data')
 cmd:option('-splitrate', 0.7, 'split rate for training and validation')
 cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx, small, hb]')
 cmd:option('-type', 'num', 'which model to use? num or symb or single')
 cmd:option('-maxiters', 300, 'maximum iterations to train')
+cmd:option('-savefreq', 50, 'save frequency')
 cmd:text()
 opt = cmd:parse(arg or {})
 
@@ -37,6 +39,17 @@ print(trainset.size)
 print(validset.size)
 trainset.data = trainset.data - trainset.data:mean()
 validset.data = validset.data - validset.data:mean()
+
+if opt.gpuid > 0 then
+    print('running on GPU')
+    require 'cutorch'
+    require 'cunn'
+    cutorch.setDevice(opt.gpuid)
+    trainset.data = trainset.data:cuda()
+    trainset.label = trainset.label:cuda()
+    validset.data = validset.data:cuda()
+    validset.label = validset.label:cuda()
+end
 
 -- step 2: building cnn model
 if opt.model == 'chq' or opt.model == 'nx' or opt.model == 'tj' then
@@ -82,25 +95,19 @@ elseif opt.type == 'single' then
     nclass = decoder.label_size + 1
 end
 
-kernel_num = 10
-kernel_size = 5
-model = nn.Sequential()
-model:add(nn.View(channel, img_size_x, img_size_y))
-model:add(nn.SpatialConvolutionMM(channel, kernel_num, kernel_size, kernel_size))
-model:add(nn.ReLU())
-model:add(nn.SpatialMaxPooling(2, 2, 2, 2, 0, 0))
-local num1 = math.floor((img_size_x - 4) / 2)
-local num2 = math.floor((img_size_y - 4) / 2)
-local num3 = kernel_num * num1 * num2
-model:add(nn.View(num3))
-model:add(nn.Linear(num3, nclass * 10))
-model:add(nn.ReLU())
-model:add(nn.Linear(nclass * 10, nclass))
-model:add(nn.LogSoftMax())
-model = require('weight-init')(model, 'xavier')
+local model_util = require 'type4_model'
+local model = model_util.createType10()
+
+if opt.gpuid > 0 then
+    model = model:cuda()
+end
 
 -- step 3: training
 criterion = nn.ClassNLLCriterion()
+if opt.gpuid > 0 then
+    criterion = criterion:cuda()
+end
+
 sgd_params = {
     learningRate = 1e-2,
     learningRateDecay = 1e-5,
@@ -119,16 +126,17 @@ step = function(batch_size)
         -- setup inputs and targets for this mini-batch
         local size = math.min(t + batch_size - 1, trainset.size) - t 
         local inputs = torch.Tensor(size, channel, img_size_x, img_size_y)--:cuda()
-        --local inputs = torch.Tensor(size, 30, 30)--:cuda()
         local targets = torch.Tensor(size)--:cuda()
         for i = 1,size do
             local input = trainset.data[shuffle[i+t]]
             local target = trainset.label[shuffle[i+t]]
-            -- if target == 0 then target = 10 end ?
             inputs[i] = input
             targets[i] = target
         end
-        targets:add(1)
+        if opt.gpuid > 0 then
+            inputs = inputs:cuda()
+            targets = targets:cuda()
+        end
         local feval = function(x_new)
             -- reset data
             if x ~= x_new then x:copy(x_new) end
@@ -156,48 +164,49 @@ end
 -- step 4: validate
 -- evaluate the accuracy of a dataset, like validset or testset
 eval = function(validset, batch_size)
+    local accu = 0
     local count = 0
+    local total_loss = 0
     batch_size = batch_size or 200
     
     for i = 1, validset.size, batch_size do
         local size = math.min(i + batch_size - 1, validset.size) - i
         local inputs = validset.data[{{i,i+size-1}}]--:cuda()
         local targets = validset.label[{{i,i+size-1}}]:long()--:cuda()
+        if opt.gpuid > 0 then
+            inputs = inputs:cuda()
+            targets = targets:cuda()
+        end
         local outputs = model:forward(inputs)
+        local loss = criterion:forward(outputs, targets-1)
         local _, indices = torch.max(outputs, 2)
-        indices:add(-1)
         local guessed_right = indices:eq(targets):sum()
-        count = count + guessed_right
+        accu = accu + guessed_right
+        count = count + 1
+        total_loss = total_loss + loss
     end
 
-    return count / validset.size
+    return total_loss / count, accu / validset.size
 end
 
 -- do start the training process
 do
-    local last_accuracy = 0
-    local decreasing = 0
-    local threshold = 1 -- how many deacreasing epochs we allow
+    model_name = 'model_type4_' .. opt.model .. '_' .. opt.type ..'.t7'
     for i = 1, opt.maxiters do
+        local timer = torch.Timer()
+        model:training()
         local loss = step()
-        local accuracy = eval(validset)
-        if i % 10 == 0 then
-            print(string.format('Epoch: %d loss = %4f\t valid_accu = %4f', i, loss, accuracy))
+        model:evaluate()
+        local v_loss, accuracy = eval(validset)
+        print(string.format('Epoch: %d loss = %.3f\t v_loss = %.3f,\t v_accu = %.3f,\tcosted %.3f s', 
+            i, loss, v_loss, accuracy, timer:time().real))
+        if i % opt.savefreq == 0 then
+            print('saving ' .. model_name)
+            torch.save(model_name, model)
         end
-        if accuracy < last_accuracy then
-            if decreasing > threshold then break end
-            decreasing = decreasing + 1
-        else
-            decreasing = 0
-        end
-        last_accuracy = accuracy
     end
 end
 
 -- step 5: saving the model
-model_name = 'model_type4_' .. opt.model .. '_' .. opt.type ..'.t7'
 print('saving ' .. model_name)
 torch.save(model_name, model)
-
--- testset.data = testset.data:double()
--- eval(testset)

@@ -63,13 +63,20 @@ for i = 1, opt.persize do
         print(i / opt.persize * 100 .. "% finished") -- progress bar
     end
     for j = 1, #fonts do
-        local img = image.load(path.join(opt.datadir, fonts[j] .. i-1 .. opt.format), 3)
+        local filename = path.join(opt.datadir, fonts[j] .. i-1 .. opt.format)
+        local img = image.load(filename, 3)
         if opt.type == 9 then
             -- type 9 needs preprocess
+            img = image.load(filename, 1)
             k = image.gaussian(3)
             img = image.convolve(img, k, 'same')
-            img[img:lt(0.5)] = 0
-            img[img:ge(0.5)] = 1
+            img[img:lt(0.99)] = 0
+            img[img:ge(0.99)] = 1
+            local img2 = image.load(filename, 3)
+            img2[1] = img
+            img2[2] = img
+            img2[3] = img
+            img = img2
         end
         data[(i-1) * #fonts + j] = img
         local file = io.open(path.join(opt.datadir, fonts[j] .. i-1 .. '.gt.txt'), 'r')
