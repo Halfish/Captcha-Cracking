@@ -52,7 +52,7 @@ function model_util.createType10()
         filter_size = 5,
         dropout_value = 0.5,
         n_full_connect = 1024,
-        nclass = 3769
+        nclass = 3768
     }
     return model_util.create(model_config)
 end

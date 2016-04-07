@@ -16,6 +16,7 @@ cmd:option('-datpath', 'type4_chq_num.dat', 'directory of training data')
 cmd:option('-splitrate', 0.7, 'split rate for training and validation')
 cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx, small, hb]')
 cmd:option('-type', 'num', 'which model to use? num or symb or single')
+cmd:option('-learningRate', 0.1, 'learning rate for cnn model')
 cmd:option('-maxiters', 300, 'maximum iterations to train')
 cmd:option('-savefreq', 50, 'save frequency')
 cmd:text()
@@ -109,7 +110,7 @@ if opt.gpuid > 0 then
 end
 
 sgd_params = {
-    learningRate = 1e-2,
+    learningRate = opt.learningRate,
     learningRateDecay = 1e-5,
     weightDecay = 1e-3,
     momentum = 1e-4
@@ -118,24 +119,25 @@ x, dl_dx = model:getParameters()
 
 step = function(batch_size)
     -- step function means traverse the whole training set
-    local current_loss = 0
+    local accu = 0
+    local total_loss = 0
     local count = 0
     local shuffle = torch.randperm(trainset.size)
     batch_size = batch_size or 200
     for t = 1, trainset.size, batch_size do
         -- setup inputs and targets for this mini-batch
-        local size = math.min(t + batch_size - 1, trainset.size) - t 
-        local inputs = torch.Tensor(size, channel, img_size_x, img_size_y)--:cuda()
-        local targets = torch.Tensor(size)--:cuda()
-        for i = 1,size do
-            local input = trainset.data[shuffle[i+t]]
-            local target = trainset.label[shuffle[i+t]]
-            inputs[i] = input
-            targets[i] = target
-        end
+        local size = math.min(t + batch_size - 1, trainset.size) - t + 1
+        local inputs = torch.Tensor(size, channel, img_size_x, img_size_y)
+        local targets = torch.Tensor(size)
         if opt.gpuid > 0 then
             inputs = inputs:cuda()
             targets = targets:cuda()
+        end
+        for i = 1,size do
+            local input = trainset.data[shuffle[i+t-1]]
+            local target = trainset.label[shuffle[i+t-1]]
+            inputs[i] = input
+            targets[i] = target
         end
         local feval = function(x_new)
             -- reset data
@@ -154,11 +156,15 @@ step = function(batch_size)
         -- fs is a table containing value of the loss function
         -- (just 1 value for the SGD optimization)
         count = count + 1
-        current_loss = current_loss + fs[1]
+        total_loss = total_loss + fs[1]
+
+        -- accuracy for trainset
+        local _, indices = torch.max(model.output, 2)
+        accu = accu + indices:eq(targets):sum()
     end
 
     -- normalize loss
-    return current_loss / count
+    return total_loss / count, accu / trainset.size
 end
 
 -- step 4: validate
@@ -170,15 +176,15 @@ eval = function(validset, batch_size)
     batch_size = batch_size or 200
     
     for i = 1, validset.size, batch_size do
-        local size = math.min(i + batch_size - 1, validset.size) - i
-        local inputs = validset.data[{{i,i+size-1}}]--:cuda()
-        local targets = validset.label[{{i,i+size-1}}]:long()--:cuda()
+        local size = math.min(i + batch_size - 1, validset.size) - i + 1
+        local inputs = validset.data[{{i,i+size-1}}]
+        local targets = validset.label[{{i,i+size-1}}]
         if opt.gpuid > 0 then
             inputs = inputs:cuda()
             targets = targets:cuda()
         end
         local outputs = model:forward(inputs)
-        local loss = criterion:forward(outputs, targets-1)
+        local loss = criterion:forward(outputs, targets)
         local _, indices = torch.max(outputs, 2)
         local guessed_right = indices:eq(targets):sum()
         accu = accu + guessed_right
@@ -191,22 +197,38 @@ end
 
 -- do start the training process
 do
+    local stoppingLR = opt.learningRate * 0.005
+    local stopwatch = 0
+    local last_v_loss = 100
     model_name = 'model_type4_' .. opt.model .. '_' .. opt.type ..'.t7'
+
     for i = 1, opt.maxiters do
         local timer = torch.Timer()
         model:training()
-        local loss = step()
+        local loss, accu = step()
         model:evaluate()
-        local v_loss, accuracy = eval(validset)
-        print(string.format('Epoch: %d loss = %.3f\t v_loss = %.3f,\t v_accu = %.3f,\tcosted %.3f s', 
-            i, loss, v_loss, accuracy, timer:time().real))
+        local valid_loss, valid_accu = eval(validset)
+        print(string.format('Epoch: %d loss = %.3f,  accu=%.3f,  v_loss = %.3f,  v_accu = %.3f, costed %.3f s', 
+            i, loss, accu, valid_loss, valid_accu, timer:time().real))
+
         if i % opt.savefreq == 0 then
             print('saving ' .. model_name)
             torch.save(model_name, model)
         end
+
+        if valid_loss > last_v_loss then
+            if stopwatch >= 3 then
+                if sgd_params.learningRate < stoppingLR then
+                    break
+                else
+                    sgd_params.learningRate = sgd_params.learningRate / 2
+                    stopwatch = 0
+                    print(string.format('new learning rate is %f', sgd_params.learningRate))
+                end
+            else
+                stopwatch = stopwatch + 1
+            end
+        end
+        last_v_loss = valid_loss
     end
 end
-
--- step 5: saving the model
-print('saving ' .. model_name)
-torch.save(model_name, model)
