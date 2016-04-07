@@ -60,10 +60,23 @@ def randomChiSaying():
     index = random.randint(0, len(ChiSayings)-1)
     return ChiSayings[index]
 
+
+codec = []
 def randomChiChar():
-    saying = randomChiSaying()
-    index = random.randint(0, 3)
-    return saying[index]
+    '''
+    generate a random chinese character from txt
+    '''
+    global codec
+    if len(codec) == 0:        # load data first
+        filepath = '../trainpic/chisayings.txt'
+        with open(filepath, 'r') as f:
+            vocab = ''.join([line.strip() for line in f.readlines()])
+            codec = list(set(vocab.decode('utf-8')))
+        print(str(len(codec)) + ' Hanzi detected!')
+    pass
+    index = random.randint(0, len(codec)-1)
+    return codec[index]
+
 
 alphabeta = 'ABCDEFGHJKLMNPQRSTUVWXYZ' # no 'I' or 'O'
 alphabeta = alphabeta + '123456789' # no '0'
