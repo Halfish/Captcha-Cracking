@@ -163,6 +163,19 @@ class ImageGenerator(object):
         self.image.putdata(data_ret)
     pass
 
+    def italic(self, img, m):
+        '''
+        shift picture to make italic effect, if m > 0, turn right, else left
+        -1 < m < 1
+        '''
+        width, height = img.size
+        xshift = abs(m) * width
+        new_width = width + int(round(xshift))
+        new_img = img.transform((new_width, height), Image.AFFINE,
+                            (1, m, -xshift, 0, 1, 0), Image.BICUBIC)
+        return new_img
+    pass
+
     def generateImage(self, strings = u'8除以6等于？', path='out.jpg'):
         '''
         genreate a picture giving string and path
@@ -251,13 +264,15 @@ class Type8ImageGenerator(ImageGenerator):
     pass
 
     def generateImage(self, strings = u'陆加上2等于几', path='out.jpg'):
-        self.image = Image.new('RGB', self.size, (255, 255, 255)) # image must be initialized here
+        background = (random.randint(200, 255), random.randint(200, 255), random.randint(200, 255))
+        self.image = Image.new('RGB', self.size, background) # image must be initialized here
         lineColor = random.randint(180, 210)
         self.randLine(num=300, length=10, color=(lineColor, lineColor, lineColor))
-        gap = 1
+        gap = 2
         x = random.randint(12, 15)
         for i in range(0, len(strings)):
             charImg = self.drawChar(text=strings[i], angle=0, color=(0, 0, 0))
+            charImg = self.italic(charImg, 0.4)
             y = (self.image.size[1] - charImg.size[1]) / 2 - 2
             self.image.paste(charImg, (x, y), charImg)
             x = x + charImg.size[1] - gap
@@ -295,6 +310,7 @@ class Type10ImageGenerator(ImageGenerator):
     pass
 
     def generateImage(self, strings = u'闻', path='out.jpg'):
+        old_fontsize = self.fontSize
         self.fontSize = self.fontSize + random.randint(-1, 1)
         self.font = ImageFont.truetype(self.fontPath, self.fontSize)
         self.image = Image.new('RGB', self.size, (255, 255, 255)) # image must be initialized here
@@ -307,6 +323,7 @@ class Type10ImageGenerator(ImageGenerator):
         x = x if x > 0 else 0
         self.image.paste(charImg, (x, y), charImg)
         self.image.save(path)
+        self.fontSize = old_fontsize
     pass
 
 def syntheticData(args):
@@ -333,7 +350,7 @@ def syntheticData(args):
         elif args.type == 5 or args.type == 6:
             ig = Type5ImageGenerator(font)
         elif args.type == 8:
-            ig = Type8ImageGenerator(font)
+            ig = Type8ImageGenerator(font, args.fontsize)
         elif args.type == 9:
             ig = Type9ImageGenerator(font)
         elif args.type == 10:
