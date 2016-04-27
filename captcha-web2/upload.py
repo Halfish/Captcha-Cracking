@@ -7,6 +7,7 @@ import tornado.httpserver
 import os.path
 import redis
 import json
+import random
 
 client = redis.StrictRedis(host='localhost', port=6379, db=0)
 p = client.pubsub()
@@ -38,6 +39,8 @@ class UploadFileHandler(tornado.web.RequestHandler):
             meta = self.request.files['file'][0]    
             province = self.get_argument("province")
             type = self.get_argument("type")
+            if type != '':
+                type = int(type) # the form has already make sure type is int
             self.write(crack(meta, province, type))
             self.write('<p>^_^</p>')
         else:
@@ -54,9 +57,8 @@ def crack(meta, province, type):
     filename = os.path.join(upload_path, filename)
     with open(filename, 'wb') as up:      
         up.write(meta['body'])
-    id = 123456
-    #info = {'filename':filename, 'id':id}
-    info = {'filename':meta['filename'], 'id':id}
+    id = random.randint(100000, 999999)
+    info = {'filename':meta['filename'], 'id':id, 'province':province, 'type':type}
     client.publish('request', json.dumps(info))
     p.subscribe(str(id))
     result = ''
