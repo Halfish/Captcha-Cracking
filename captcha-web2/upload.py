@@ -36,7 +36,7 @@ class UploadFileHandler(tornado.web.RequestHandler):
 
     def post(self):
         if len(self.request.files) > 0:
-            meta = self.request.files['file'][0]    
+            meta = self.request.files['file'][0]
             province = self.get_argument("province")
             type = self.get_argument("type")
             if type != '':
@@ -52,13 +52,13 @@ class UploadFileHandler(tornado.web.RequestHandler):
 def crack(meta, province, type):
     global province_dict
     # given a picture, return captcha breaking results in json format
-    upload_path = os.path.join(os.path.dirname(__file__), 'static/files/')  
+    upload_path = os.path.join(os.path.dirname(__file__), 'static/files/')
     filename = 'captcha.' + meta['filename'].split('.')[1]
     filename = os.path.join(upload_path, filename)
-    with open(filename, 'wb') as up:      
+    with open(filename, 'wb') as up:
         up.write(meta['body'])
     id = random.randint(100000, 999999)
-    info = {'filename':meta['filename'], 'id':id, 'province':province, 'type':type}
+    info = {'filename':filename, 'id':id, 'province':province, 'type':type}
     client.publish('request', json.dumps(info))
     p.subscribe(str(id))
     result = ''
