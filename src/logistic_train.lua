@@ -6,6 +6,7 @@ cmd = torch.CmdLine()
 cmd:text()
 cmd:text("Options:")
 cmd:option('-gpuid', -1, 'which GPU to choose, -1 means using CPU')
+cmd:option('-type', 23, 'which type to choose, 23 or 56?')
 cmd:option('-datapath', 'fullset.dat', 'directory of training data')
 cmd:option('-splitrate', 0.7, 'split rate for training and validation')
 cmd:option('-learningRate', 0.1, 'learning rate for cnn model')
@@ -16,9 +17,10 @@ cmd:text()
 opt = cmd:parse(arg or {})
 
 -- step 1: loading data
--- local fullset = torch.load(opt.datapath)
-mnist = require 'mnist'
-fullset = mnist.traindataset()
+local fullset = torch.load(opt.datapath)
+-- mnist = require 'mnist'
+-- fullset = mnist.traindataset()
+
 t_size = math.floor(fullset.size * opt.splitrate)
 v_size = fullset.size - t_size
 trainset = {
@@ -36,6 +38,7 @@ print(validset.size)
 trainset.data = trainset.data - trainset.data:mean()
 validset.data = validset.data - validset.data:mean()
 
+
 if opt.gpuid > 0 then
     print('running on GPU')
     require 'cutorch'
@@ -48,30 +51,29 @@ if opt.gpuid > 0 then
 end
 
 -- step 2: building cnn model
-local channel = 1
-local img_size_x = 28
-local img_size_y = 28
---[[
+local channel, img_size_x, img_size_y
+if opt.type == 23 then
+    channel = 3 
+    img_size_x = 53
+    img_size_y = 160
+elseif opt.type == 56 then
+    channel = 3 
+    img_size_x = 40
+    img_size_y = 180
+end
+
 local model_util = require 'type4_model'
 local model_config = {
-    picsize = {1, 28, 28},
+    picsize = {channel, img_size_x, img_size_y},
     n_conv_layers = 2,
-    filter_num = {1, 4, 8},
+    filter_num = {channel, 4, 8},
     filter_size = 5,
     dropout_value = 0.5,
-    n_full_connect = 256,
-    nclass = 10
+    n_full_connect = 10,
+    nclass = 2 
 }
-local model = model_util.create(model_config)
-]]--
+model = model_util.create(model_config)
 
-model = nn.Sequential()
-model:add(nn.View(28*28))
-model:add(nn.MulConstant(0.1))
-model:add(nn.Linear(28*28, 100))
-model:add(nn.ReLU())
-model:add(nn.Linear(100, 10))
-model:add(nn.LogSoftMax())
 print(model)
 
 if opt.gpuid > 0 then
@@ -88,7 +90,7 @@ sgd_params = {
     learningRate = opt.learningRate,
     learningRateDecay = 1e-5,
     weightDecay = 1e-3,
-    momentum = 0.9
+    momentum = 1e-4
 }
 x, dl_dx = model:getParameters()
 print('get', (#x)[1], 'parameters')
@@ -105,7 +107,6 @@ step = function()
             data = data:cuda()
             label = label:cuda()
         end
-        label = label + 1
         local feval = function(x_new)
             -- reset data
             if x ~= x_new then x:copy(x_new) end
@@ -147,10 +148,15 @@ eval = function(validset, batch_size)
             label = label:cuda()
         end
         local output = model:forward(data)
-        local loss = criterion:forward(output, label+1)
+        local loss = criterion:forward(output, label)
+
+        if i == 10 then
+            -- local last = model:get(2)
+            -- print(last.output)
+        end
 
         local _, index = model.output:max(1)
-        if index[1] == label+1 then
+        if index[1] == label then
             accu = accu + 1
         end
         total_loss = total_loss + loss
