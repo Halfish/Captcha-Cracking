@@ -7,23 +7,23 @@ opt = cmd:parse(arg or {})
 require 'nngraph'
 require 'image'
 if opt.gpuid > 0 then
+    print('Loading GPU...')
     require 'cutorch'
     require 'cunn'
     cutorch.setDevice(opt.gpuid)
 end
 
+print('loading models from type1 to type9')
 local model1 = torch.load('../models/model_type1.t7')
 local model2 = torch.load('../models/model_type2.t7')
 local model3 = torch.load('../models/model_type3.t7')
 local model5 = torch.load('../models/model_type5.t7')
 local model6 = torch.load('../models/model_type6.t7')
-local model9 = torch.load('../models/model_type9.t7')
 model1:evaluate()
 model2:evaluate()
 model3:evaluate()
 model5:evaluate()
 model6:evaluate()
-model9:evaluate()
 
 local model23 = torch.load('../models/model_log_type23.t7')
 local model56 = torch.load('../models/model_log_type56.t7')
@@ -42,6 +42,7 @@ local decoder3 = decoder_util.create('../trainpic/chisayings.txt', 4)
 local decoder4 = decoder_util.create('../trainpic/codec_type9.txt', 4)
 
 function readImage(filename)
+    print(filename)
     local img = image.load(filename)
     img = image.rgb2yuv(img)
     local channels = {'y', 'u', 'v'}
@@ -71,13 +72,13 @@ function specifyType(img)
         local _, index = output:max(1)
         print('type', index[1]+4, 'specified')
         return index[1] + 4     -- return 2 or 3
+    elseif size[1] == 3 and size[2] == 50 and size[3] == 200 then
+        return 1
     end
 end
 
-function chooseModel(img, captype)
-    if captype == 0 then
-        captype = specifyType(img)
-    end
+function chooseModel(img)
+    local captype = specifyType(img)
     local model, decoder
     if captype == 1 then
         model = model1
@@ -94,20 +95,25 @@ function chooseModel(img, captype)
     elseif captype == 6 then
         model = model6
         decoder = decoder3
-    elseif captype == 9 then
-        model = model9
-        decoder = decoder4
     end
-    return model, decoder
+    return model, decoder, captype
 end
 
-function crack(filename, captype)
-    print(filename)
+cjson = require 'cjson'
+function crack(filename)
     local img = readImage(filename)
-    local model, decoder = chooseModel(img, captype)
+    local model, decoder, captype = chooseModel(img)
     local output = model:forward(img)
     local pred_label = decoder:output2label(output)
-    return decoder:label2str(pred_label)
+    local expr = decoder:label2str(pred_label)
+    local answer = ''
+    if captype == 1 or captype == 2 or captype == 5 then
+        answer = decoder:str2answer(expr)
+    elseif captype == 3 or captype == 6 then
+        answer = expr
+    end
+    local jsonstring = {expr=expr, answer=tostring(answer), valid=true, accu=70.00}
+    return cjson.encode(jsonstring)
 end
 
 -- see https://github.com/nrk/redis-lua/blob/version-2.0/examples/pubsub.lua 
@@ -120,14 +126,16 @@ local client2 = redis.connect('127.0.0.1', 6379)
 for msg in client:pubsub({subscribe = {'request'}}) do
     if msg.kind == 'subscribe' then
         print('subscribe to channel ' .. msg.channel)
+        print('Lua -> I am ready!\n')
     elseif msg.kind == 'message' then
         message = cjson.decode(msg.payload)
-        print('message:', message)
+        print('Lua: Oh I have got job to do.:')
+        print(message, '\n')
         local id = message['id']
         local province = message['province']
         local filename = message['filename']
-        local captype = message['type']
-        local result = crack(filename, captype)
+        local result = crack(filename)
         client2:publish(id, result)
+        print('answer to', id, 'is', result)
     end
 end

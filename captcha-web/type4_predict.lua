@@ -85,7 +85,7 @@ else
     local accu = (output[1][2] + output[2][2] + output[3][2]) / 3
     accu = math.floor(accu * 10000 + 0.5) / 100
     
-    local ret = {expr=expr, result=result, accu=accu, valid=true}
+    local ret = {expr=expr, result=tostring(result), accu=accu, valid=true}
     local cjson = require 'cjson'
     print(cjson.encode(ret))
 end
