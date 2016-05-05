@@ -61,7 +61,7 @@ type4_province_dict = dict(provinces_1, ** provinces_2)
 svhn_provinces = ['anhui', 'guangxi', 'henan', 'heilongjiang', 'qinghai', 'shanxi',
                 'xizang', 'fujian', 'nation', 'hebei', 'shanghai', 'yunnan', 'hunan',
                   'guangdong', 'hainan', 'neimenggu']
-tess4_provinces = ['jiangsu', 'liaoning']
+tess_provinces = ['jiangsu', 'liaoning']
 prep_mapper = {'chq':type4_cut.preprocess_chq, 'gs':type4_cut.preprocess_gs,
         'nx':type4_cut.preprocess_nx, 'tj':type4_cut.preprocess_tj,
         'jx':type4_cut.preprocess_jx, 'small':type4_cut.preprocess_small}
@@ -107,22 +107,22 @@ def crack(filename, province):
     info = {'accu':0, 'expr':'', 'valid':False, 'result':'', 'notes':'No such province, hiahia'}
     return json.dumps(info)
 
+import pytesseract
+import Image
 def tess_reco_js(filename):
     img = cv2.imread(filename, 0)
     blur = cv2.bilateralFilter(img, 5, 75, 75)
     ret, thresh = cv2.threshold(blur, 190, 255, cv2.THRESH_BINARY)
     cv2.imwrite('binary.jpg', thresh)
-    command = "tesseract binary.jpg a 2> /dev/null && cat a.txt"
-    output = os.popen(command)
-    result = output.read().strip().replace(' ', '').replace('.', '')
+    result = pytesseract.image_to_string(Image.open('binary.jpg'))
+    result = result.strip().replace(' ', '').replace('.', '')
     info = {'accu':50, 'expr':result, 'valid':True, 'result':result}
     return json.dumps(info)
 pass
 
 def tess_reco_ln(filename):
-    command = "tesseract " + filename + " a -l chi_sim 2> /dev/null && cat a.txt"
-    output = os.popen(command)
-    result = output.read().strip().replace(' ', '')
+    result = pytesseract.image_to_string(Image.open(filename), lang='chi_sim')
+    result = result.strip().replace(' ', '')
     print 'captcha is: ' + result
     expr = result
     if len(result) == 5:
