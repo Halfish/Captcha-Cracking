@@ -17,7 +17,7 @@ Usage 2: util tool for type4_predict.lua to preprocess pictures
 def norByMoments(img):
     norImage = 255 - img    # must be white words with black background
     moments = cv2.moments(norImage)
-    (centroid_x, centroid_y) = (moments['m10'] / moments['m00'], moments['m01'] / moments['m00'])
+    (centroid_x, centroid_y) = (int(moments['m10'] / moments['m00']), int(moments['m01'] / moments['m00']))
     (y1, y2, x1, x2) = (0, img.shape[0], 0, img.shape[1])
     if (centroid_x * 2 > x2):
         x1 = centroid_x * 2 - x2
@@ -36,9 +36,9 @@ def uniformSize(img):
     '''
     uni_size_x = 30
     uni_size_y = 30
-    uniImage = 255 * np.ones((uni_size_y, uni_size_x), np.uint8) 
+    uniImage = 255 * np.ones((uni_size_y, uni_size_x), np.uint8)
     if len(img.shape) == 3:
-        uniImage = 255 * np.ones((uni_size_y, uni_size_x, 3), np.uint8) 
+        uniImage = 255 * np.ones((uni_size_y, uni_size_x, 3), np.uint8)
     y1 = 15 - img.shape[0] / 2
     y2 = y1 + img.shape[0]
     x1 = 15 - img.shape[1] / 2
@@ -232,7 +232,7 @@ def small():
 if __name__ == '__main__':
     parser =argparse.ArgumentParser()
     parser.add_argument('province', choices=['chq', 'gs', 'nx', 'tj', 'jx', 'small'], help='which province to choice')
-    parser.add_argument('-f', '--function', choices=['single', 'dump'], default='dump', 
+    parser.add_argument('-f', '--function', choices=['single', 'dump'], default='dump',
                         help='cut single picture or dump data')
     parser.add_argument('-p', '--imgpath', help='image path to read from')
     args = parser.parse_args()
@@ -241,7 +241,7 @@ if __name__ == '__main__':
         f = mapper[args.province]
         f()
     elif args.function == 'single':
-        mapper = {'chq':preprocess_chq, 'gs':preprocess_gs, 'nx':preprocess_nx, 'tj':preprocess_tj, 
+        mapper = {'chq':preprocess_chq, 'gs':preprocess_gs, 'nx':preprocess_nx, 'tj':preprocess_tj,
                   'jx':preprocess_jx, 'small':preprocess_small}
         f = mapper[args.province]
         f(args.imgpath, 'alpha.png', 'beta.png', 'gamma.png')

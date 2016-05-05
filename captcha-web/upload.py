@@ -8,8 +8,10 @@ import os
 import redis
 import json
 import random
+import cv2
+import type4_cut
 
-client = redis.StrictRedis(host='localhost', port=6379, db=0)
+client = redis.StrictRedis(host='localhost', port=6379, db=0, socket_timeout=3)
 p = client.pubsub()
 
 from tornado.options import define, options
@@ -59,20 +61,27 @@ type4_province_dict = dict(provinces_1, ** provinces_2)
 svhn_provinces = ['anhui', 'guangxi', 'henan', 'heilongjiang', 'qinghai', 'shanxi',
                 'xizang', 'fujian', 'nation', 'hebei', 'shanghai', 'yunnan', 'hunan',
                   'guangdong', 'hainan', 'neimenggu']
+tess4_provinces = ['jiangsu', 'liaoning']
+prep_mapper = {'chq':type4_cut.preprocess_chq, 'gs':type4_cut.preprocess_gs,
+        'nx':type4_cut.preprocess_nx, 'tj':type4_cut.preprocess_tj,
+        'jx':type4_cut.preprocess_jx, 'small':type4_cut.preprocess_small}
 
 def crack(filename, province):
     global province_dict
     global svhn_provinces
-    if type4_province_dict.has_key(province):
-        print 'python:using type4 model'
-        command = 'th type4_predict.lua -province ' + type4_province_dict[province] + ' -picpath ' + filename
-        output = os.popen(command)
-        output = output.read().strip()
-        return output # remove unknown symbol
-    elif province in svhn_provinces:
-        print 'python:using svhn model'
+    if type4_province_dict.has_key(province) or province in svhn_provinces:
         id = random.randint(100000, 999999)
-        info = {'filename':filename, 'id':id, 'province':province}
+        which_model = ''
+        if province in svhn_provinces:
+            which_model = 'svhn'
+        else:
+            which_model = 'type4'
+            province = type4_province_dict[province]
+            # preprocess
+            f = prep_mapper[province]
+            f(filename, 'alpha.png', 'beta.png', 'gamma.png')
+        pass
+        info = {'type':which_model, 'filename':filename, 'id':id, 'province':province}
         client.publish('request', json.dumps(info))
         p.subscribe(str(id))
         result = ''
@@ -85,11 +94,46 @@ def crack(filename, province):
                 break
             pass
         return result
+    elif province in tess_provinces:
+        print 'type0, using tesseract'
+        if province == 'jiangsu':
+            return tess_reco_js(filename)
+        elif province == 'liaoning':
+            return tess_reco_ln(filename)
+        pass
     pass
 
     # no such province
     info = {'accu':0, 'expr':'', 'valid':False, 'result':'', 'notes':'No such province, hiahia'}
     return json.dumps(info)
+
+def tess_reco_js(filename):
+    img = cv2.imread(filename, 0)
+    blur = cv2.bilateralFilter(img, 5, 75, 75)
+    ret, thresh = cv2.threshold(blur, 190, 255, cv2.THRESH_BINARY)
+    cv2.imwrite('binary.jpg', thresh)
+    command = "tesseract binary.jpg a 2> /dev/null && cat a.txt"
+    output = os.popen(command)
+    result = output.read().strip().replace(' ', '').replace('.', '')
+    info = {'accu':50, 'expr':result, 'valid':True, 'result':result}
+    return json.dumps(info)
+pass
+
+def tess_reco_ln(filename):
+    command = "tesseract " + filename + " a -l chi_sim 2> /dev/null && cat a.txt"
+    output = os.popen(command)
+    result = output.read().strip().replace(' ', '')
+    print 'captcha is: ' + result
+    expr = result
+    if len(result) == 5:
+        result = result.replace('乘', '*').replace('加', '+')
+        if result[1] == '+':
+            result = int(result[0]) + int(result[2])
+        elif result[1] == '*':
+            result = int(result[0]) * int(result[2])
+    info = {'accu':60, 'expr':expr, 'valid':True, 'result':result}
+    return json.dumps(info)
+
 
 if __name__ == '__main__':
     tornado.options.parse_command_line()

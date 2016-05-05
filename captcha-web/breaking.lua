@@ -1,11 +1,13 @@
+local cjson = require 'cjson'
+require 'nngraph'
+require 'image'
+
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text('Option:')
 cmd:option('-gpuid', -1, 'GPU id')
 opt = cmd:parse(arg or {})
 
-require 'nngraph'
-require 'image'
 if opt.gpuid > 0 then
     print('Loading GPU...')
     require 'cutorch'
@@ -41,8 +43,67 @@ local decoder2 = decoder_util.create('../trainpic/codec_type2.txt', 5)
 local decoder3 = decoder_util.create('../trainpic/chisayings.txt', 4)
 local decoder4 = decoder_util.create('../trainpic/codec_type9.txt', 4)
 
+-- loading type4 models
+local type4_provinces = {'gs', 'jx', 'nx', 'tj', 'chq', 'small'}
+local type4_models = {}
+print('loading type4 models')
+for i, p in ipairs(type4_provinces) do
+    local model = torch.load('../models/model_type4_' .. p .. '_num.t7')
+    type4_models[p .. '_num'] = model
+    model = torch.load('../models/model_type4_' .. p .. '_symb.t7')
+    type4_models[p .. '_symb'] = model
+end
+
+
+function eval(filename, province, model_num, model_symb)
+    local alpha = image.load('alpha.png')
+    local beta = image.load('beta.png')
+    local gamma = image.load('gamma.png')
+    alpha = alpha - alpha:mean()
+    beta = beta - beta:mean()
+    gamma = gamma - gamma:mean()
+
+    local output1 = model_num:forward(alpha)
+    local v1, i1 = output1:max(1)
+    local output2 = model_symb:forward(beta)
+    local v2, i2 = output2:max(1)
+    local output3 = model_num:forward(gamma)
+    local v3, i3 = output3:max(1)
+
+    local codec = {'+', '-', '*'}
+    output = {}
+    output[1] = {i1[1] - 1, math.exp(v1[1])}
+    output[2] = {codec[i2[1]], math.exp(v2[1])}
+    output[3] = {i3[1] - 1, math.exp(v3[1])}
+
+    return output
+end
+
+function strmath(a, b, c)
+    if b == '+' then
+        return a + c
+    elseif b == '-' then
+        return a - c
+    elseif b == '*' then
+        return a * c
+    end
+end
+
+function type4_reco(filename, province)
+    local model_num = type4_models[province .. '_num']
+    local model_symb = type4_models[province .. '_symb']
+    local output = eval(filename, province, model_num, model_symb)
+    local expr = output[1][1] .. output[2][1] .. output[3][1]
+    local result = strmath(output[1][1], output[2][1], output[3][1])
+    local accu = (output[1][2] + output[2][2] + output[3][2]) / 3
+    accu = math.floor(accu * 10000 + 0.5) / 100
+
+    local ret = {expr=expr, result=tostring(result), accu=accu, valid=true}
+    return cjson.encode(ret)
+end
+
+
 function readImage(filename)
-    print(filename)
     local img = image.load(filename)
     img = image.rgb2yuv(img)
     local channels = {'y', 'u', 'v'}
@@ -99,8 +160,7 @@ function chooseModel(img)
     return model, decoder, captype
 end
 
-cjson = require 'cjson'
-function crack(filename)
+function svhn_reco(filename)
     local img = readImage(filename)
     local model, decoder, captype = chooseModel(img)
     local output = model:forward(img)
@@ -112,14 +172,12 @@ function crack(filename)
     elseif captype == 3 or captype == 6 then
         answer = expr
     end
-    local jsonstring = {expr=expr, answer=tostring(answer), valid=true, accu=70.00}
+    local jsonstring = {expr=expr, answer=tostring(answer), valid=true, accu=70}
     return cjson.encode(jsonstring)
 end
 
 -- see https://github.com/nrk/redis-lua/blob/version-2.0/examples/pubsub.lua 
 local redis = require 'redis'
-local cjson = require 'cjson'
-
 local client = redis.connect('127.0.0.1', 6379)
 local client2 = redis.connect('127.0.0.1', 6379)
 
@@ -134,7 +192,13 @@ for msg in client:pubsub({subscribe = {'request'}}) do
         local id = message['id']
         local province = message['province']
         local filename = message['filename']
-        local result = crack(filename)
+        local which_model = message['type']
+        local result = ''
+        if which_model == 'svhn' then
+            result = svhn_reco(filename)
+        elseif which_model == 'type4' then
+            result = type4_reco(filename, province)
+        end
         client2:publish(id, result)
         print('answer to', id, 'is', result)
     end
