@@ -40,8 +40,7 @@ class UploadFileHandler(tornado.web.RequestHandler):
         if len(self.request.files) > 0:
             meta = self.request.files['file'][0]
             upload_path = os.path.join(os.path.dirname(__file__), 'static/files/')
-            #filename = 'captcha.' + meta['filename'].split('.')[1]
-            filename ='captcha.jpg'
+            filename = 'captcha.' + meta['filename'].split('.')[1]
             filename = os.path.join(upload_path, filename)
             with open(filename, 'wb') as up:
                 up.write(meta['body'])
@@ -82,8 +81,8 @@ def crack(filename, province):
             f(filename, 'alpha.png', 'beta.png', 'gamma.png')
         pass
         info = {'type':which_model, 'filename':filename, 'id':id, 'province':province}
+        p.subscribe(str(id)) # must subscribe first in case to miss the message
         client.publish('request', json.dumps(info))
-        p.subscribe(str(id))
         result = ''
         for item in p.listen():
             if item['type'] == 'subscribe':

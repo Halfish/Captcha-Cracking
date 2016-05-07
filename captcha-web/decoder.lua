@@ -198,7 +198,7 @@ function decoder_util:str2answer(expr)
     elseif operator == '*' then
         return num1 * num2
     elseif operator == '/' then
-        local reminder = num1 / num2
+        local reminder = num1 % num2
         if reminder ~= reminder or reminder ~= 0 then
             return ''
         else
