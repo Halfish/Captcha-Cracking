@@ -42,6 +42,7 @@ local decoder1 = decoder_util.create('../trainpic/codec_type1.txt', 8)
 local decoder2 = decoder_util.create('../trainpic/codec_type2.txt', 5)
 local decoder3 = decoder_util.create('../trainpic/chisayings.txt', 4)
 local decoder4 = decoder_util.create('../trainpic/codec_type9.txt', 4)
+local decoder5 = decoder_util.create('../trainpic/codec_type6.txt', 4)
 
 -- loading type4 models
 local type4_provinces = {'gs', 'jx', 'nx', 'tj', 'chq', 'small'}
@@ -155,7 +156,7 @@ function chooseModel(img)
         decoder = decoder2
     elseif captype == 6 then
         model = model6
-        decoder = decoder3
+        decoder = decoder5
     end
     return model, decoder, captype
 end

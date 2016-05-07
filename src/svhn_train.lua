@@ -35,13 +35,15 @@ if opt.type == 1 then
     decoder = decoder_util.create('../trainpic/codec_type1.txt', 8)
 elseif opt.type == 2 or opt.type == 5 then
     decoder = decoder_util.create('../trainpic/codec_type2.txt', 5)
-elseif opt.type == 3 or opt.type == 6 then
+elseif opt.type == 3 then
     decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
+elseif opt.type == 6 then
+    decoder = decoder_util.create('../trainpic/codec_type6.txt', 4)
 elseif opt.type == 9 then
     decoder = decoder_util.create('../trainpic/codec_type9.txt', 4)
 end
- -- print(decoder.label_size)
- -- print(decoder.ndigits)
+print('decoder label size', decoder.label_size)
+print('decoder ndigits', decoder.ndigits)
 
 
 print("loading data...")
@@ -244,6 +246,8 @@ for i = 1, opt.max_epochs do
     if valid_loss > last_v_loss then
         if stopwatch >= 3 then
             if sgd_params.learningRate < stoppingLR then
+                print('early stopping, saving model...')
+                torch.save(opt.savename, model)
                 break
             else
                 sgd_params.learningRate = sgd_params.learningRate / 2

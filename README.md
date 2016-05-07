@@ -22,8 +22,8 @@ any complex deep learing model using Torch7.
 [OpenCV](http://opencv.org) is a open source computer vision library. We use opencv to pre-process
 the image before we formally begin the recogize it. And we mainly use Python interface in the program.
 
-## svhn model
-When cracking type1, type2 and type3 CAPTCHA, our model is always prefixed with svhn, 
+## Model A: SVHN Model
+When cracking type1 to type6 CAPTCHA, our model is always prefixed with svhn, 
 which we have already explained what is SVHN up there, because this model is used to recognize SVHN at first.
 The details are listed as following.
 
@@ -37,29 +37,32 @@ cd src/
 # to see how to use engine
 python engine.py -h
 
-# generate 1000 type 2 pictures, saving in ../synpic/type2/
-python engine.py -t 2 -n 1000 -d ../synpic/type2
+# generate 1000 type 2 pictures, saving in ../trainpic/type2/
+python engine.py -t 2 -n 1000 -d ../trainpic/type2
+python engine.py -t 6 -n 1000 -d ../trainpic/type6
 ```
 
 ### Step 2: Dump full data set
 ```lua
 -- to see how to dump data
-th dump.lua -h
+th svhn_dump.lua -h
 
 -- dump 1000 type 2 picture for every font
-th dump.lua -persize 1000 -type 2 -datadir ../synpic/type2 -savename type2_1000.dat
+th svhn_dump.lua -persize 1000 -type 2 -datadir ../trainpic/type2 -savename type2_1000.dat
+th svhn_dump.lua -persize 1000 -type 6 -datadir ../trainpic/type6 -savename type6_1000.dat
 ```
 
 ### Step 3: Train the model
 ```lua
 -- to see how to train a model
-th svhn.lua -h
+th svhn_train.lua -h
 
--- using GPU-2 to train a CNN model from type1 CAPTCHA
-th svhn.lua -gpuid 2 -type 1 -dataname type1_data.dat -savename model_type1.t7
+-- using GPU-2(start from 1) to train a CNN model from type1 CAPTCHA
+th svhn_train.lua -gpuid 2 -type 1 -dataname type1_data.dat -savename model_type1.t7
+th svhn_train.lua -gpuid 2 -type 6 -dataname type6_1000.dat -savename model_type6.t7
 ```
 
-## Simple model
+## Model B: Simple Model
 Some type of Captcha has fixed position of every character we need to crack, so we can cut out and
 use any simple classifier to recognize them. But the pre-process is essential and important.
 Our type4 Captcha, including four websites belonging to four provinces, can be cracked by this way.

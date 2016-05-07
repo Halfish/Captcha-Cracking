@@ -46,12 +46,12 @@ def randomEquation(mode='en'):
     return equation
 
 ChiSayings = []
-def randomChiSaying():
+def randomChiSaying(filepath):
     '''
     generate a random chinese saying from txt
     '''
     if len(ChiSayings) == 0:        # load data first
-        filepath = '../trainpic/chisayings.txt'
+        filepath = filepath or '../trainpic/chisayings.txt'
         with open(filepath, 'r') as f:
             for line in f.readlines():
                 line = unicode(line.strip(), 'utf-8')
@@ -302,7 +302,7 @@ class Type9ImageGenerator(ImageGenerator):
     def generateImage(self, strings = u'7URT', path='out.jpg'):
         self.image = Image.new('RGB', self.size, (255, 255, 255)) # image must be initialized here
         self.randLine(num=20, length=15, color=0)
-        gap = 5 
+        gap = 5
         x = random.randint(32, 35)
         for i in range(0, len(strings)):
             charImg = self.drawChar(text=strings[i], angle=0, color=(0, 0, 0))
@@ -341,7 +341,7 @@ class Type10ImageGenerator(ImageGenerator):
 
 def syntheticData(args):
     if type(args.fonts) == str:
-        args.fonts = [args.fonts]
+        args.fonts = args.fonts.split(' ')
     if not os.path.isdir(args.savedir):
         os.mkdir(args.savedir)
         print('mkdir ' + args.savedir)
@@ -380,8 +380,10 @@ def syntheticData(args):
                     label = randomEquation(mode='en')
                 elif args.type == 2 or args.type == 5:
                     label = randomEquation(mode='chi')
-                elif args.type == 3 or args.type == 6:
+                elif args.type == 3:
                     label = randomChiSaying()
+                elif args.type == 6:
+                    label = randomChiSaying('../trainpic/codec_type6.txt')
                 elif args.type == 8:
                     label = randomEquation()
                 elif args.type == 9:

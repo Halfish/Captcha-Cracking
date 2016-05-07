@@ -234,9 +234,9 @@ function model_util.createType6()
         filter_num = {3, 4, 8, 16},
         filter_size = 5,
         dropout_value = 0.5,
-        n_full_connect = 1024,
+        n_full_connect = 128,
         ndigits = 4,
-        label_size = 3769
+        label_size = 294
     }
     return model_util.create(model_config)
 end

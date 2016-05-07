@@ -185,11 +185,11 @@ function decoder_util:simple2str_type2(simple)
     return str .. '等于'
 end
 
--- constrain the answer within the training examples for type3
-function decoder_util:find_best_match(output)
+-- constrain the answer within the training examples for type3 or type6
+function decoder_util:find_best_match(output, filename)
     if self.train_distrib == nil then
         print('creating train_distrib')
-        local file = io.open('../synpic/chisayings.txt', 'r')
+        local file = io.open(filename or '../trainpic/codec_type6.txt', 'r')
         local words = {}
         for line in file:lines() do
             words[#words + 1] = line

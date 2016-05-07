@@ -21,6 +21,8 @@ elseif opt.type == 2 or opt.type == 5 then
     decoder = decoder_util.create('../trainpic/codec_type2.txt', 5)
 elseif opt.type == 3 then
     decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
+elseif opt.type == 6 then
+    decoder = decoder_util.create('../trainpic/codec_type6.txt', 4)
 elseif opt.type == 9 then
     decoder = decoder_util.create('../trainpic/codec_type9.txt', 4)
 end
@@ -30,6 +32,7 @@ model:evaluate()
 
 file = io.open(path.join(opt.testdir, 'label.txt'), 'r')
 local accuracy = 0.0
+local right = {}
 for i = 1, opt.num do
     local img = image.load(path.join(opt.testdir, i .. opt.format))
     if opt.type == 9 then
@@ -62,7 +65,7 @@ for i = 1, opt.num do
         str = decoder:simple2str_type1(file:read())
     elseif opt.type == 2 or opt.type == 5 then
         str = decoder:simple2str_type2(file:read())
-    elseif opt.type == 3 or opt.type == 9 then
+    elseif opt.type == 3 or opt.type == 6 or opt.type == 9 then
         str = file:read()
     end
     local real_label = decoder:str2label(str)
@@ -70,10 +73,17 @@ for i = 1, opt.num do
     -- print("really label = ", real_label)
     if decoder:compareLabel(pred_label, real_label) then
         accuracy = accuracy + 1
+        right[#right+1] = true
+    else 
+        right[#right+1] = false
     end
-    if i % 5 == 0 then
-        print(string.format("i = %d,  \tpred = %s,\tlabel = %s", i, 
-        decoder:label2str(pred_label), decoder:label2str(real_label)))
+    if i % 1 == 0 then
+        local flag = ''
+        if not right[i] then
+            flag = 'false'
+        end
+        print(string.format("i = %d,  \tpred = %s,\tlabel = %s, %s", i, 
+        decoder:label2str(pred_label), decoder:label2str(real_label), flag))
     end
 end
 accuracy = accuracy / opt.num * 100

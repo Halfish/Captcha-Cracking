@@ -46,7 +46,7 @@ elseif opt.type == 5 then
 elseif opt.type == 6 then
     data = torch.Tensor(fullset.size, 3, 40, 180)
     label = torch.IntTensor(fullset.size, 5):fill(0)
-    decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
+    decoder = decoder_util.create('../trainpic/codec_type6.txt', 4)
 elseif opt.type == 9 then
     data = torch.Tensor(fullset.size, 3, 50, 150)
     label = torch.IntTensor(fullset.size, 5):fill(0)
