@@ -14,7 +14,7 @@ cmd:text("Options:")
 cmd:option('-gpuid', -1, 'which GPU to choose, -1 means using CPU')
 cmd:option('-datpath', 'type4_chq_num.dat', 'directory of training data')
 cmd:option('-splitrate', 0.7, 'split rate for training and validation')
-cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx, small, hb]')
+cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx, small, nacao, bj, hb]')
 cmd:option('-type', 'num', 'which model to use? num or symb or single')
 cmd:option('-learningRate', 0.1, 'learning rate for cnn model')
 cmd:option('-maxiters', 300, 'maximum iterations to train')
@@ -36,8 +36,8 @@ validset = {
     data = fullset.data[{{t_size+1, fullset.size}}]:double(),
     label = fullset.label[{{t_size+1, fullset.size}}]
 }
-print(trainset.size)
-print(validset.size)
+print(trainset)
+print(validset)
 trainset.data = trainset.data - trainset.data:mean()
 validset.data = validset.data - validset.data:mean()
 
@@ -83,6 +83,14 @@ elseif opt.model == 'hb' then
     channel = 3
     img_size_x = 22
     img_size_y = 40
+elseif opt.model == 'nacao' then
+    channel = 3
+    img_size_x = 30
+    img_size_y = 20
+elseif opt.model == 'bj' then
+    channel = 3
+    img_size_x = 41
+    img_size_y = 34
 end
 print('input image size = ', channel, img_size_x, img_size_y)
 
@@ -92,12 +100,26 @@ elseif opt.type == 'symb' then
     nclass = 3  -- 2 or 3 symbols to classify, '[+-*]' 
 elseif opt.type == 'single' then
     decoder_util = require 'decoder'
-    decoder = decoder_util.create('../trainpic/chisayings.txt', 1)
+    if opt.model == 'bj' then
+        decoder = decoder_util.create('../trainpic/codec_type9.txt', 1)
+    elseif opt.model == 'hb' then
+        decoder = decoder_util.create('../trainpic/chisayings.txt', 1)
+    end
     nclass = decoder.label_size + 1
 end
 
 local model_util = require 'type4_model'
-local model = model_util.createType10()
+local model_config = {
+    picsize = {channel, img_size_x, img_size_y},
+    n_conv_layers = 2,
+    filter_num = {channel, 4, 8},
+    filter_size = 5,
+    dropout_value = 0.2,
+    n_full_connect = 128,
+    nclass = nclass
+}
+local model = model_util.create(model_config)
+print(model)
 
 if opt.gpuid > 0 then
     model = model:cuda()
@@ -128,7 +150,7 @@ step = function(batch_size)
         -- setup inputs and targets for this mini-batch
         local size = math.min(t + batch_size - 1, trainset.size) - t + 1
         local inputs = torch.Tensor(size, channel, img_size_x, img_size_y)
-        local targets = torch.Tensor(size)
+        local targets = torch.IntTensor(size)
         if opt.gpuid > 0 then
             inputs = inputs:cuda()
             targets = targets:cuda()
@@ -160,7 +182,7 @@ step = function(batch_size)
 
         -- accuracy for trainset
         local _, indices = torch.max(model.output, 2)
-        accu = accu + indices:eq(targets):sum()
+        accu = accu + indices:int():eq(targets):sum()
     end
 
     -- normalize loss
@@ -186,7 +208,7 @@ eval = function(validset, batch_size)
         local outputs = model:forward(inputs)
         local loss = criterion:forward(outputs, targets)
         local _, indices = torch.max(outputs, 2)
-        local guessed_right = indices:eq(targets):sum()
+        local guessed_right = indices:int():eq(targets):sum()
         accu = accu + guessed_right
         count = count + 1
         total_loss = total_loss + loss

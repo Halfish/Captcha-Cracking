@@ -10,13 +10,13 @@ local fullset = {}
 local codec = {'+', '-', '*'}
 local codec_mapper = {}
 for i = 1, #codec do
-    codec_mapper[codec[i]] = i - 1
+    codec_mapper[codec[i]] = i
 end
 
 -- define arguments
 local cmd = torch.CmdLine()
 cmd:text()
-cmd:option('-province', 'nx', 'which province to choice? [chq, gs, nx, tj, jx, small]')
+cmd:option('-province', 'nx', 'which province to choice? [chq, gs, nx, tj, jx, small, nacao]')
 cmd:option('-typename', 'num', 'num or symb')
 cmd:option('-picdir', '../trainpic/type4/', 'directory of pictures to train')
 cmd:option('-size', 99, 'how many pictures to dump')
@@ -50,6 +50,8 @@ elseif opt.province == 'small' then
     end
 elseif opt.province == 'chq' or opt.province == 'nx' or opt.province == 'tj' then
     data = torch.Tensor(opt.size, 1, 30, 30)
+elseif opt.province == 'nacao' then
+    data = torch.Tensor(opt.size, 3, 30, 20)
 end
 
 -- find every file which matches the regular expression
@@ -60,7 +62,7 @@ for file in paths.iterfiles(opt.picdir) do
         local l = string.split(file, '%.')[1]
         l = string.split(l, '_')[4]
         if opt.typename == 'num' then
-            label[i] = tonumber(l)
+            label[i] = tonumber(l) + 1
         elseif opt.typename == 'symb' then
             label[i] = codec_mapper[l]
         end

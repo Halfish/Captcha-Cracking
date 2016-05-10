@@ -58,9 +58,9 @@ function standard_test()
         if opt.province == 'chq' then
             format = '.png'
         end
-        local picpath = path.join('../testpic/type4/' .. opt.province, (5000+i-1) .. format)
+        local picpath = path.join('../testpic/type4/' .. opt.province, (300+i) .. format)
         local output = eval(picpath)
-        print(string.format('i = %d, pred = %s, avg_accu = %4f', i+5000-1, 
+        print(string.format('i = %d, pred = %s, avg_accu = %4f', i+300, 
             output[1][1] .. ' ' .. output[2][1] .. ' ' .. output[3][1], 
             (output[1][2] + output[2][2] + output[3][2]) / 3))
     end

@@ -229,20 +229,48 @@ def small():
         pass
     pass
 
+def preprocess_nacao(n_img, n_alpha, n_beta, n_gamma):
+    # nacao captcha, 100*30
+    img = cv2.imread(n_img)
+    #blur = cv2.bilateralFilter(img, 5, 75, 75)
+    #ret, thresh = cv2.threshold(blur, 150, 255, cv2.THRESH_BINARY)
+    alpha = img[0:30, 0:20]         # 30 * 20 
+    beta = img[0:30, 20:40]         # 30 * 20
+    gamma = img[0:30, 40:60]        # 30 * 20
+    cv2.imwrite(n_alpha, alpha)
+    cv2.imwrite(n_beta, beta)
+    cv2.imwrite(n_gamma, gamma)
+
+def nacao():
+    num = 200
+    label_path = '../trainpic/type4/nacao/label.txt'
+    pic_dir = '../trainpic/type4/nacao/'
+    save_dir = '../trainpic/type4/'
+    with open(label_path, 'r') as f:
+        labels = f.readlines()
+        for i in range(num):
+            n_img = os.path.join(pic_dir, str(i+1) + '.jpg')
+            n_alpha = os.path.join(save_dir, 'nacao_'+ str(i+1) + '_1_' + labels[i][0] + '.png')
+            n_beta= os.path.join(save_dir, 'nacao_'+ str(i+1) + '_2_' + labels[i][1] + '.png')
+            n_gamma = os.path.join(save_dir, 'nacao_'+ str(i+1) + '_3_' + labels[i][2] + '.png')
+            preprocess_nacao(n_img, n_alpha, n_beta, n_gamma)
+        pass
+    pass
+
 if __name__ == '__main__':
     parser =argparse.ArgumentParser()
-    parser.add_argument('province', choices=['chq', 'gs', 'nx', 'tj', 'jx', 'small'], help='which province to choice')
+    parser.add_argument('province', choices=['chq', 'gs', 'nx', 'tj', 'jx', 'small', 'nacao'], help='which province to choice')
     parser.add_argument('-f', '--function', choices=['single', 'dump'], default='dump', 
                         help='cut single picture or dump data')
     parser.add_argument('-p', '--imgpath', help='image path to read from')
     args = parser.parse_args()
     if args.function == 'dump':
-        mapper = {'chq':chongqing, 'gs':gansu, 'nx':ningxia, 'tj':tianjin, 'jx':jiangxi, 'small':small}
+        mapper = {'chq':chongqing, 'gs':gansu, 'nx':ningxia, 'tj':tianjin, 'jx':jiangxi, 'small':small, 'nacao':nacao}
         f = mapper[args.province]
         f()
     elif args.function == 'single':
         mapper = {'chq':preprocess_chq, 'gs':preprocess_gs, 'nx':preprocess_nx, 'tj':preprocess_tj, 
-                  'jx':preprocess_jx, 'small':preprocess_small}
+                  'jx':preprocess_jx, 'small':preprocess_small, 'nacao':preprocess_nacao}
         f = mapper[args.province]
         f(args.imgpath, 'alpha.png', 'beta.png', 'gamma.png')
     pass
