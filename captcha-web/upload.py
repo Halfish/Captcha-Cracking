@@ -40,7 +40,8 @@ class UploadFileHandler(tornado.web.RequestHandler):
         if len(self.request.files) > 0:
             meta = self.request.files['file'][0]
             upload_path = os.path.join(os.path.dirname(__file__), 'static/files/')
-            filename = 'captcha.' + meta['filename'].split('.')[1]
+            #filename = 'captcha.' + meta['filename'].split('.')[1]
+            filename = 'captcha'
             filename = os.path.join(upload_path, filename)
             with open(filename, 'wb') as up:
                 up.write(meta['body'])
@@ -54,7 +55,7 @@ class UploadFileHandler(tornado.web.RequestHandler):
             self.write('failed to upload')
     pass
 
-provinces_1 = {'gansu':'gs', 'jiangxi':'jx', 'ningxia':'nx', 'tianjin':'tj', 'chongqing':'chq'}
+provinces_1 = {'gansu':'gs', 'jiangxi':'jx', 'ningxia':'nx', 'tianjin':'tj', 'chongqing':'chq', 'nacao':'nacao'}
 provinces_2 = {'shan3xi':'small', 'sichuan':'small', 'xinjiang':'small'}
 type4_province_dict = dict(provinces_1, ** provinces_2)
 svhn_provinces = ['anhui', 'guangxi', 'henan', 'heilongjiang', 'qinghai', 'shanxi',
@@ -63,25 +64,27 @@ svhn_provinces = ['anhui', 'guangxi', 'henan', 'heilongjiang', 'qinghai', 'shanx
 tess_provinces = ['jiangsu', 'liaoning']
 prep_mapper = {'chq':type4_cut.preprocess_chq, 'gs':type4_cut.preprocess_gs,
         'nx':type4_cut.preprocess_nx, 'tj':type4_cut.preprocess_tj,
-        'jx':type4_cut.preprocess_jx, 'small':type4_cut.preprocess_small}
+        'jx':type4_cut.preprocess_jx, 'small':type4_cut.preprocess_small, 'nacao':type4_cut.preprocess_nacao}
+single_provinces = ['beijing']
 
 def crack(filename, province):
     global province_dict
     global svhn_provinces
-    if type4_province_dict.has_key(province) or province in svhn_provinces:
+    if type4_province_dict.has_key(province) or province in svhn_provinces or province in single_provinces:
         id = random.randint(100000, 999999)
         which_model = ''
         if province in svhn_provinces:
             which_model = 'svhn'
+        elif province in single_provinces:
+            which_model = 'single'
         else:
             which_model = 'type4'
             province = type4_province_dict[province]
-            # preprocess
-            f = prep_mapper[province]
+            f = prep_mapper[province]   # preprocess
             f(filename, 'alpha.png', 'beta.png', 'gamma.png')
         pass
         info = {'type':which_model, 'filename':filename, 'id':id, 'province':province}
-        p.subscribe(str(id)) # must subscribe first in case to miss the message
+        p.subscribe(str(id)) # must subscribe first in case to not miss the message
         client.publish('request', json.dumps(info))
         result = ''
         for item in p.listen():

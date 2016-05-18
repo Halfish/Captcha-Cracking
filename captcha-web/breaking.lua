@@ -41,11 +41,10 @@ local decoder_util = require 'decoder'
 local decoder1 = decoder_util.create('../trainpic/codec_type1.txt', 8)
 local decoder2 = decoder_util.create('../trainpic/codec_type2.txt', 5)
 local decoder3 = decoder_util.create('../trainpic/chisayings.txt', 4)
-local decoder4 = decoder_util.create('../trainpic/codec_type9.txt', 4)
-local decoder5 = decoder_util.create('../trainpic/codec_type6.txt', 4)
+local decoder4 = decoder_util.create('../trainpic/codec_type6.txt', 4)
 
 -- loading type4 models
-local type4_provinces = {'gs', 'jx', 'nx', 'tj', 'chq', 'small'}
+local type4_provinces = {'gs', 'jx', 'nx', 'tj', 'chq', 'small', 'nacao'}
 local type4_models = {}
 print('loading type4 models')
 for i, p in ipairs(type4_provinces) do
@@ -54,6 +53,10 @@ for i, p in ipairs(type4_provinces) do
     model = torch.load('../models/model_type4_' .. p .. '_symb.t7')
     type4_models[p .. '_symb'] = model
 end
+
+print('loading beijing model')
+local bjModel = torch.load('../models/model_type4_bj_single.t7')
+local bjDecoder = decoder_util.create('../trainpic/codec_type9.txt', 1)
 
 
 function eval(filename, province, model_num, model_symb)
@@ -156,7 +159,7 @@ function chooseModel(img)
         decoder = decoder2
     elseif captype == 6 then
         model = model6
-        decoder = decoder5
+        decoder = decoder4
     end
     return model, decoder, captype
 end
@@ -174,6 +177,23 @@ function svhn_reco(filename)
         answer = expr
     end
     local jsonstring = {expr=expr, answer=tostring(answer), valid=true, accu=70}
+    return cjson.encode(jsonstring)
+end
+
+function single_reco(filename)
+    local img = image.load(filename)
+    local alpha = {}
+    alpha[1] = img[{{}, {8, 48}, {28, 61}}]
+    alpha[2] = img[{{}, {8, 48}, {58, 91}}]
+    alpha[3] = img[{{}, {8, 48}, {90, 123}}]
+    alpha[4] = img[{{}, {8, 48}, {117, 150}}]
+
+    local label = ''
+    for i = 1, 4 do
+        local _, index = bjModel:forward(alpha[i] - alpha[i]:mean()):max(1)
+        label = label .. bjDecoder.rev_mapper[index[1]]
+    end
+    local jsonstring = {expr=label, answer=label, valid=true, accu=50}
     return cjson.encode(jsonstring)
 end
 
@@ -199,6 +219,8 @@ for msg in client:pubsub({subscribe = {'request'}}) do
             result = svhn_reco(filename)
         elseif which_model == 'type4' then
             result = type4_reco(filename, province)
+        elseif which_model == 'single' then
+            result = single_reco(filename)
         end
         client2:publish(id, result)
         print('answer to', id, 'is', result)
