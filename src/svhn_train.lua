@@ -41,6 +41,8 @@ elseif opt.type == 6 then
     decoder = decoder_util.create('../trainpic/codec_type6.txt', 4)
 elseif opt.type == 9 then
     decoder = decoder_util.create('../trainpic/codec_type9.txt', 4)
+elseif opt.type == 103 then
+    decoder = decoder_util.create('../trainpic/codec_nacao.txt', 6)
 end
 print('decoder label size', decoder.label_size)
 print('decoder ndigits', decoder.ndigits)
@@ -69,17 +71,16 @@ end
 
 -- build a new model or use an existed model
 model_util = require 'svhn_model'
-model = nil
 model_config = {
-    picsize = {3, 50, 150},
-    n_conv_layers = 3,  -- n_conv_layers == (#filter_num) - 1
-    filter_num = {3, 4, 8, 16},
+    picsize = {3, 50, 140},
+    filter_num = {3, 8, 16, 32},
     filter_size = 5,
     dropout_value = opt.dropout,
-    n_full_connect = 512,
-    ndigits = 4,
+    n_full_connect = 1024,
+    ndigits = decoder.ndigits,
     label_size = decoder.label_size,
 }
+local model
 if opt.model == '' then
     print("building CNN model...")
     if opt.type == 1 then
@@ -92,7 +93,7 @@ if opt.model == '' then
         model = model_util.createType5()
     elseif opt.type == 6 then
         model = model_util.createType6()
-    elseif opt.type == 9 then
+    elseif opt.type == 9 or opt.type == 103 then
         model = model_util.create(model_config)
     end
 else
