@@ -21,11 +21,13 @@ local model2 = torch.load('../models/model_type2.t7')
 local model3 = torch.load('../models/model_type3.t7')
 local model5 = torch.load('../models/model_type5.t7')
 local model6 = torch.load('../models/model_type6.t7')
+local model103 = torch.load('../models/nacao6w.t7')
 model1:evaluate()
 model2:evaluate()
 model3:evaluate()
 model5:evaluate()
 model6:evaluate()
+model103:evaluate()
 
 local model23 = torch.load('../models/model_log_type23.t7')
 local model56 = torch.load('../models/model_log_type56.t7')
@@ -42,6 +44,7 @@ local decoder1 = decoder_util.create('../trainpic/codec_type1.txt', 8)
 local decoder2 = decoder_util.create('../trainpic/codec_type2.txt', 5)
 local decoder3 = decoder_util.create('../trainpic/chisayings.txt', 4)
 local decoder4 = decoder_util.create('../trainpic/codec_type6.txt', 4)
+local decoder5 = decoder_util.create('../trainpic/codec_nacao.txt', 6)
 
 -- loading type4 models
 local type4_provinces = {'gs', 'jx', 'nx', 'tj', 'chq', 'small', 'nacao'}
@@ -102,13 +105,13 @@ function type4_reco(filename, province)
     local accu = (output[1][2] + output[2][2] + output[3][2]) / 3
     accu = math.floor(accu * 10000 + 0.5) / 100
 
-    local ret = {expr=expr, result=tostring(result), accu=accu, valid=true}
+    local ret = {expr=expr, answer=tostring(result), accu=accu, valid=true}
     return cjson.encode(ret)
 end
 
 
 function readImage(filename)
-    local img = image.load(filename)
+    local img = image.load(filename, 3)
     img = image.rgb2yuv(img)
     local channels = {'y', 'u', 'v'}
     local mean = {}
@@ -139,6 +142,8 @@ function specifyType(img)
         return index[1] + 4     -- return 2 or 3
     elseif size[1] == 3 and size[2] == 50 and size[3] == 200 then
         return 1
+    elseif size[1] == 3 and size[2] == 27 and size[3] == 100 then
+        return 103
     end
 end
 
@@ -160,6 +165,9 @@ function chooseModel(img)
     elseif captype == 6 then
         model = model6
         decoder = decoder4
+    elseif captype == 103 then
+        model = model103
+        decoder = decoder5
     end
     return model, decoder, captype
 end
@@ -172,11 +180,11 @@ function svhn_reco(filename)
     local expr = decoder:label2str(pred_label)
     local answer = ''
     if captype == 1 or captype == 2 or captype == 5 then
-        answer = decoder:str2answer(expr)
-    elseif captype == 3 or captype == 6 then
+        answer = tostring(decoder:str2answer(expr))
+    elseif captype == 3 or captype == 6 or captype == 103 then
         answer = expr
     end
-    local jsonstring = {expr=expr, answer=tostring(answer), valid=true, accu=70}
+    local jsonstring = {expr=expr, answer=answer, valid=true, accu=70}
     return cjson.encode(jsonstring)
 end
 
@@ -216,11 +224,15 @@ for msg in client:pubsub({subscribe = {'request'}}) do
         local which_model = message['type']
         local result = ''
         if which_model == 'svhn' then
-            result = svhn_reco(filename)
+            ok, result = pcall(svhn_reco, filename)
         elseif which_model == 'type4' then
-            result = type4_reco(filename, province)
+            ok, result = pcall(type4_reco, filename, province)
         elseif which_model == 'single' then
-            result = single_reco(filename)
+            ok, result = pcall(single_reco, filename)
+        end
+        if not ok then
+            jsondict = {expr='', answer='', valid=false, accu=0}
+            result = cjson.encode(jsondict)
         end
         client2:publish(id, result)
         print('answer to', id, 'is', result)

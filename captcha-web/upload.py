@@ -60,11 +60,11 @@ provinces_2 = {'shan3xi':'small', 'sichuan':'small', 'xinjiang':'small'}
 type4_province_dict = dict(provinces_1, ** provinces_2)
 svhn_provinces = ['anhui', 'guangxi', 'henan', 'heilongjiang', 'qinghai', 'shanxi',
                 'xizang', 'fujian', 'nation', 'hebei', 'shanghai', 'yunnan', 'hunan',
-                  'guangdong', 'hainan', 'neimenggu']
+                  'guangdong', 'hainan', 'neimenggu', 'nacao']
 tess_provinces = ['jiangsu', 'liaoning']
 prep_mapper = {'chq':type4_cut.preprocess_chq, 'gs':type4_cut.preprocess_gs,
         'nx':type4_cut.preprocess_nx, 'tj':type4_cut.preprocess_tj,
-        'jx':type4_cut.preprocess_jx, 'small':type4_cut.preprocess_small, 'nacao':type4_cut.preprocess_nacao}
+        'jx':type4_cut.preprocess_jx, 'small':type4_cut.preprocess_small}
 single_provinces = ['beijing']
 
 def crack(filename, province):
@@ -75,6 +75,8 @@ def crack(filename, province):
         which_model = ''
         if province in svhn_provinces:
             which_model = 'svhn'
+            if province == 'nacao':
+                type4_cut.nacao3(filename)
         elif province in single_provinces:
             which_model = 'single'
         else:

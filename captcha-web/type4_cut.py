@@ -234,9 +234,9 @@ def preprocess_nacao(n_img, n_alpha, n_beta, n_gamma):
     img = cv2.imread(n_img)
     #blur = cv2.bilateralFilter(img, 5, 75, 75)
     #ret, thresh = cv2.threshold(blur, 150, 255, cv2.THRESH_BINARY)
-    alpha = img[0:30, 0:20]         # 30 * 20
-    beta = img[0:30, 20:40]         # 30 * 20
-    gamma = img[0:30, 40:60]        # 30 * 20
+    alpha = img[0:30, 2:25]         # 30 * 20
+    beta = img[0:30, 30:53]         # 30 * 20
+    gamma = img[0:30, 51:74]        # 30 * 20
     cv2.imwrite(n_alpha, alpha)
     cv2.imwrite(n_beta, beta)
     cv2.imwrite(n_gamma, gamma)
@@ -256,6 +256,15 @@ def nacao():
             preprocess_nacao(n_img, n_alpha, n_beta, n_gamma)
         pass
     pass
+
+def nacao3(filename):
+    img = cv2.imread(filename)
+    r, g, b = cv2.split(img)
+    blur = cv2.bilateralFilter(b, 7, 35, 35)
+    adaptive = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                     cv2.THRESH_BINARY, 11, 2)
+    cv2.imwrite(filename+'.jpg', adaptive)
+    os.rename(filename + '.jpg', filename)
 
 if __name__ == '__main__':
     parser =argparse.ArgumentParser()
