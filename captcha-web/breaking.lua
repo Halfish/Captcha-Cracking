@@ -1,6 +1,7 @@
 local cjson = require 'cjson'
 require 'nngraph'
 require 'image'
+require 'base64'
 
 cmd = torch.CmdLine()
 cmd:text()
@@ -62,14 +63,12 @@ local bjModel = torch.load('../models/model_type4_bj_single.t7')
 local bjDecoder = decoder_util.create('../trainpic/codec_type9.txt', 1)
 
 
-function eval(filename, province, model_num, model_symb)
-    local alpha = image.load('alpha.png')
-    local beta = image.load('beta.png')
-    local gamma = image.load('gamma.png')
-    alpha = alpha - alpha:mean()
-    beta = beta - beta:mean()
-    gamma = gamma - gamma:mean()
-
+function eval(imgs, province, model_num, model_symb)
+    for i = 1, #imgs do
+        imgs[i]:add(-imgs[i]:mean())
+        imgs[i]:div(imgs[i]:std())
+    end
+    alpha, beta, gamma = unpack(imgs)
     local output1 = model_num:forward(alpha)
     local v1, i1 = output1:max(1)
     local output2 = model_symb:forward(beta)
@@ -96,10 +95,10 @@ function strmath(a, b, c)
     end
 end
 
-function type4_reco(filename, province)
+function type4_reco(imgs, province)
     local model_num = type4_models[province .. '_num']
     local model_symb = type4_models[province .. '_symb']
-    local output = eval(filename, province, model_num, model_symb)
+    local output = eval(imgs, province, model_num, model_symb)
     local expr = output[1][1] .. output[2][1] .. output[3][1]
     local result = strmath(output[1][1], output[2][1], output[3][1])
     local accu = (output[1][2] + output[2][2] + output[3][2]) / 3
@@ -109,71 +108,66 @@ function type4_reco(filename, province)
     return cjson.encode(ret)
 end
 
-
-function readImage(filename)
-    local img = image.load(filename, 3)
-    img = image.rgb2yuv(img)
-    local channels = {'y', 'u', 'v'}
-    local mean = {}
-    local std = {}
-    for i, channel in ipairs(channels) do
-        mean[i] = img[i]:mean()
-        std[i] = img[i]:std()
-        img[i]:add(-mean[i])
-        img[i]:div(std[i])
+function normalizeImage(img)
+    if img:size()[1] == 1 then
+        local img2 = torch.Tensor(3, img:size()[2], img:size()[3])
+        img2[1] = img[1]
+        img2[2] = img[1]
+        img2[3] = img[1]
+        img = img2
     end
     if opt.gpuid > 0 then
         img = img:cuda()
+    end
+    img = image.rgb2yuv(img)
+    local channels = {'y', 'u', 'v'}
+    for i, channel in ipairs(channels) do
+        img[i]:add(-img[i]:mean())
+        img[i]:div(img[i]:std())
     end
     return img
 end
 
 function specifyType(img)
-    local size = img:size()
+    local size = img:size():totable()
+    local imgtype = 0
     if size[1] == 3 and size[2] == 53 and size[3] == 160 then
         local output = model23:forward(img)
         local _, index = output:max(1)
-        print('type', index[1]+1, 'specified')
-        return index[1] + 1     -- return 2 or 3
+        imgtype = index[1] + 1     -- return 2 or 3
     elseif size[1] == 3 and size[2] == 40 and size[3] == 180 then
         local output = model56:forward(img)
         local _, index = output:max(1)
-        print('type', index[1]+4, 'specified')
-        return index[1] + 4     -- return 2 or 3
+        imgtype = index[1] + 4     -- return 2 or 3
     elseif size[1] == 3 and size[2] == 50 and size[3] == 200 then
-        return 1
+        imgtype = 1
     elseif size[1] == 3 and size[2] == 27 and size[3] == 100 then
-        return 103
+        imgtype = 103
     end
+    return imgtype
 end
 
 function chooseModel(img)
     local captype = specifyType(img)
     local model, decoder
     if captype == 1 then
-        model = model1
-        decoder = decoder1
+        model, decoder = model1, decoder1
     elseif captype == 2 then
-        model = model2
-        decoder = decoder2
+        model, decoder = model2, decoder2
     elseif captype == 3 then
-        model = model3
-        decoder = decoder3
+        model, decoder = model3, decoder3
     elseif captype == 5 then
-        model = model5
-        decoder = decoder2
+        model, decoder = model5, decoder2
     elseif captype == 6 then
-        model = model6
-        decoder = decoder4
+        model, decoder = model6, decoder4
     elseif captype == 103 then
-        model = model103
-        decoder = decoder5
+        model, decoder = model103, decoder5
     end
     return model, decoder, captype
 end
 
-function svhn_reco(filename)
-    local img = readImage(filename)
+function svhn_reco(img)
+    local img = normalizeImage(img)
     local model, decoder, captype = chooseModel(img)
     local output = model:forward(img)
     local pred_label = decoder:output2label(output)
@@ -188,8 +182,8 @@ function svhn_reco(filename)
     return cjson.encode(jsonstring)
 end
 
-function single_reco(filename)
-    local img = image.load(filename)
+function single_reco(img)
+    --img = normalizeImage(img)
     local alpha = {}
     alpha[1] = img[{{}, {8, 48}, {28, 61}}]
     alpha[2] = img[{{}, {8, 48}, {58, 91}}]
@@ -205,6 +199,45 @@ function single_reco(filename)
     return cjson.encode(jsonstring)
 end
 
+function handle_message(message)
+    local id = message['id']
+    local which_model = message['type']
+    local province = message['province']
+    local format = message['format']
+    local imgs = message['imgs']
+    print(string.format("%d %s new message: %s, %s, %s, %d imgs", 
+            id, os.date('%X %x'), which_model, province, format, #imgs))
+    for i = 1, #imgs do
+        local img = base64.decode(imgs[i])
+        img = torch.ByteTensor(torch.ByteStorage():string(img))
+        if format == 'JPEG' then
+            img = image.decompressJPG(img)
+        elseif format == 'PNG' then
+            img = image.decompressPNG(img)
+        else
+            error(string.format('not jpeg or png, but %s image', format))
+        end
+        imgs[i] = img
+    end
+
+    local result = ''
+    if which_model == 'svhn' then
+        ok, result = pcall(svhn_reco, imgs[1])
+    elseif which_model == 'type4' then
+        if province == 'single' then
+            ok, result = pcall(single_reco, imgs[1])
+        else
+            ok, result = pcall(type4_reco, imgs, province)
+        end
+    end
+    if not ok then
+        print(result)
+        jsondict = {expr='', answer='', valid=false, accu=0}
+        result = cjson.encode(jsondict)
+    end
+    return id, result
+end
+
 -- see https://github.com/nrk/redis-lua/blob/version-2.0/examples/pubsub.lua 
 local redis = require 'redis'
 local client = redis.connect('127.0.0.1', 6379)
@@ -216,25 +249,8 @@ for msg in client:pubsub({subscribe = {'request'}}) do
         print('Lua -> I am ready!\n')
     elseif msg.kind == 'message' then
         message = cjson.decode(msg.payload)
-        print('Lua: Oh I have got job to do.:')
-        print(message, '\n')
-        local id = message['id']
-        local province = message['province']
-        local filename = message['filename']
-        local which_model = message['type']
-        local result = ''
-        if which_model == 'svhn' then
-            ok, result = pcall(svhn_reco, filename)
-        elseif which_model == 'type4' then
-            ok, result = pcall(type4_reco, filename, province)
-        elseif which_model == 'single' then
-            ok, result = pcall(single_reco, filename)
-        end
-        if not ok then
-            jsondict = {expr='', answer='', valid=false, accu=0}
-            result = cjson.encode(jsondict)
-        end
+        local id, result = handle_message(message)
         client2:publish(id, result)
-        print('answer to', id, 'is', result)
+        print(string.format('%d %s -> %s\n', id, os.date('%X'), result))
     end
 end
