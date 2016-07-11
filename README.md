@@ -14,13 +14,39 @@ which was firstly desigined to extract street view house number(SVHN) from Googl
 Click here to read the origin article.
 [Multi-digi Number Recognition from Street View Imagery using Deep Convolutional Neural Networks](http://arxiv.org/abs/1312.6082)
 
-## About Torch7
+## About Torch7 & OpenCV
 [Torch7](http://torch.ch) is a scientific computing framework based on Lua. We can easily build
 any complex deep learing model using Torch7.
-
-## About OpenCV
+Install torch7 by following these commands,
+```shell
+git clone https://github.com/torch/distro.git ~/torch --recursive
+cd ~/torch; bash install-deps
+./install.sh
+source ~/.zshrc
+```
 [OpenCV](http://opencv.org) is a open source computer vision library. We use opencv to pre-process
 the image before we formally begin the recogize it. And we mainly use Python interface in the program.
+Install opencv through apt-get
+```shell
+sudo apt-get install python-opencv
+```
+
+## web service
+[Tornado](http://www.tornadoweb.org/en/stable/index.html) is a Python web framewrok and asynchronous networking library.
+Install tornado-4.3 by pip, and using redis to connect tornado and torch7.
+```shell
+sudo pip install tornado
+sudo apt-get install redis-server
+redis-server &
+sudo pip install redis      # install redis for python interface
+luarocks install redis-lua  # install redis for lua interface
+
+# start service
+git clone https://github.com/Halfish/Captcha-Cracking.git
+cd captcha-web
+nohup python upload.py & > logpy.txt
+nohup th breaking.lua -gpuid 1 & > loglua.txt
+```
 
 ## Model A: SVHN Model
 When cracking type1 to type6 CAPTCHA, our model is always prefixed with svhn, 
