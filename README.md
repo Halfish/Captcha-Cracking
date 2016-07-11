@@ -3,12 +3,14 @@
 This is a program aiming to crack some CAPTCHA on several website, which may
 include both traditional method as well as deep learning method.
 
-1. Traditional Methods
+**1. Traditional Methods**
+
 By traditional methods, we firstly need to preprocess the image like removing noises
 in the background, and do the slant correction if the character have some rotated angles.
 Then, cut out each single characters and train a classifier to recognize them.
 
-2. Deep Learning Methods
+**2. Deep Learning Methods**
+
 In this program, we mainly use a Convolutional Neural Network model developed by Google,
 which was firstly desigined to extract street view house number(SVHN) from Google Map.
 Click here to read the origin article.
@@ -53,12 +55,12 @@ When cracking type1 to type6 CAPTCHA, our model is always prefixed with svhn,
 which we have already explained what is SVHN up there, because this model is used to recognize SVHN at first.
 The details are listed as following.
 
-### Step 0: Go to the ./src/ sub derectory
+Step 0: Go to the ./src/ sub derectory
 ```shell
 cd src/
 ```
 
-### Step 1: Generate synthetic pictures with labels
+Step 1: Generate synthetic pictures with labels
 ```python
 # to see how to use engine
 python engine.py -h
@@ -68,7 +70,7 @@ python engine.py -t 2 -n 1000 -d ../trainpic/type2
 python engine.py -t 6 -n 1000 -d ../trainpic/type6
 ```
 
-### Step 2: Dump full data set
+Step 2: Dump full data set
 ```lua
 -- to see how to dump data
 th svhn_dump.lua -h
@@ -78,7 +80,7 @@ th svhn_dump.lua -persize 1000 -type 2 -datadir ../trainpic/type2 -savename type
 th svhn_dump.lua -persize 1000 -type 6 -datadir ../trainpic/type6 -savename type6_1000.dat
 ```
 
-### Step 3: Train the model
+Step 3: Train the model
 ```lua
 -- to see how to train a model
 th svhn_train.lua -h
@@ -95,12 +97,12 @@ Our type4 Captcha, including four websites belonging to four provinces, can be c
 Type4 Captcha including chongqing(chq), gansu(gs), ningxia(nx) and tianjin(tj).
 Here are some details.
 
-### Step 0: 
+Step 0: 
 ```shell
 cd src/
 ```
 
-### Step 1: Generate some pictures with labels
+Step 1: Generate some pictures with labels
 ```shell
 python type4_cutAndDump.py chq
 python type4_cutAndDump.py gs
@@ -109,7 +111,7 @@ python type4_cutAndDump.py tj
 ```
 This script will generate some pictures under ./trainpic/type4/
 
-### Step 2: dump data before training
+Step 2: dump data before training
 ```shell
 th type4_dump.lua -province chq -typename num
 th type4_dump.lua -province chq -typename symb
@@ -125,12 +127,12 @@ th type4_dump.lua -province tj -typename symb
 ```
 You can manually move the *.dat to ../data/ for better directory organization.
 
-### Step 3: training
+Step 3: training
 ```shell
 th type4_train.lua -maxiters 300 -model chq -type num -datpath ../data/type4_chq_num.dat
 ```
 
-### Step 4: prediction
+Step 4: prediction
 We have 200 pictures without labels prepared for prediction. 
 Or you can just predict just one picture.
 ```shell
