@@ -37,6 +37,9 @@ sudo apt-get install python-opencv
 [Tornado](http://www.tornadoweb.org/en/stable/index.html) is a Python web framewrok and asynchronous networking library.
 Install tornado-4.3 by pip, and using redis to connect tornado and torch7.
 ```shell
+sudo apt-get install tesseract-ocr-chi-sim
+sudo pip install pytesseract
+sudo pip install futures
 sudo pip install tornado
 sudo apt-get install redis-server
 redis-server &
