@@ -30,7 +30,6 @@ svhn_province = ['anhui', 'guangxi', 'henan', 'heilongjiang', 'qinghai',
                  'yunnan', 'hunan', 'guangdong', 'hainan', 'neimenggu', 'nacao']
 tess_province = ['jiangsu', 'liaoning']
 
-@timing
 def crack(imgfile, province):
     '''
     given a binary image file and province name
@@ -175,7 +174,6 @@ def nacao(img):
 def beijing(img):
     return [img]
 
-@timing
 def tess_reco(pil_image, province):
     if province == 'jiangsu':
         return tess_reco_js(pil_image)
@@ -194,7 +192,7 @@ def tess_reco_js(pil_image):
     result = pytesseract.image_to_string(Image.fromarray(thresh))
     print time() - ts
     result = result.strip().replace(' ', '').replace('.', '')
-    info = {'accu':50, 'expr':result, 'valid':True, 'result':result}
+    info = {'accu':50, 'expr':result, 'valid':True, 'answer':result}
     return info
 
 def tess_reco_ln(pil_image):
@@ -208,5 +206,5 @@ def tess_reco_ln(pil_image):
             result = int(result[0]) + int(result[2])
         elif result[1] == '*':
             result = int(result[0]) * int(result[2])
-    info = {'accu':60, 'expr':expr, 'valid':True, 'result':result}
+    info = {'accu':60, 'expr':expr, 'valid':True, 'answer':result}
     return info

@@ -55,8 +55,10 @@ class UploadFileHandler(tornado.web.RequestHandler):
         if len(self.request.files) > 0:
             imgfile = self.request.files['file'][0]['body']
             province = self.get_argument("province")
+            print 'province:' + province
             result = yield do_stuff(imgfile, province)
             self.write(result)
+            print json.loads(result)['expr']
         else:
             print self.request
             self.write('failed to upload')
@@ -68,7 +70,6 @@ class TaskRunner(object):
         self.loop = loop or IOLoop.instance()
 
     @run_on_executor
-    @timing
     def long_running_task(self, imgfile, province):
         captype, capformat, province, capinfo = categorize.crack(imgfile, province)
         if captype == 'tess':
@@ -77,7 +78,7 @@ class TaskRunner(object):
             return broadcast(province, captype, capformat, capinfo)
         else:
             # no such province
-            info = {'accu':0, 'expr':'', 'valid':False, 'result':'', 'notes':'No such province, hiahia'}
+            info = {'accu':0, 'expr':'', 'valid':False, 'answer':'', 'notes':'No such province, hiahia'}
             return json.dumps(info)
 
 tasks = TaskRunner()
@@ -86,7 +87,6 @@ def do_stuff(imgfile, province):
     result = yield tasks.long_running_task(imgfile, province)
     raise gen.Return(result)
 
-@timing
 def broadcast(province, captype, capformat, capimg):
     capid = random.randint(100000000, 999999999)
     info = {'id':capid, 'province':province, 'type':captype, 'format':capformat, 'imgs':capimg}
