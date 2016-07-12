@@ -100,6 +100,8 @@ def broadcast(province, captype, capformat, capimg):
             pass
         elif item['type'] == 'message':
             result = item['data']
+            p.unsubscribe(str(capid))
+            p.close()
             break
         pass
     return result
