@@ -42,15 +42,23 @@ def randomEquation(mode='en'):
     elif op == '/':             # to make sure (x % y == 0) and (y != 0)
         y = random.randint(1, 9)
         x = x * y
-    equation = operation(x, op, y, mode)
-    return equation
+    ret = operation(x, op, y, mode)
+    return ret
+
+def randomType7Equation():
+    x = random.choice([c for c in u'0123456789〇零壹贰叁肆伍陆柒捌玖'])
+    y = random.choice([c for c in u'0123456789〇零壹贰叁肆伍陆柒捌玖'])
+    op = random.choice([u'加', u'减', u'加上', u'减去'])
+    equ = random.choice([u'等于几', u'等于？', u'=？', u'＝几', u'是多少', u'的结果'])
+    ret = x + op + y + equ
+    return ret
 
 def randomType8Equation():
     x = random.choice([c for c in u'0123456789〇零壹贰叁肆伍陆柒捌玖'])
     y = random.choice([c for c in u'0123456789〇零壹贰叁肆伍陆柒捌玖'])
     op = random.choice([u'加', u'减', u'乘', u'+', u'-', u'x', u'加上', u'减去', u'乘以'])
-    equation = x + op + y + u'等于几'
-    return equation
+    ret = x + op + y + u'等于几'
+    return ret
 
 ChiSayings = []
 def randomChiSaying(filepath):
@@ -134,7 +142,7 @@ class ImageGenerator(object):
         pass
     pass
 
-    def randLine(self, num=30, length=12, color=-1):
+    def randLine(self, num=30, length=12, color=-1, maxAngle=360):
         '''
         make some random line noises
         '''
@@ -144,7 +152,7 @@ class ImageGenerator(object):
             # draw a line from random point(x1, y1) at random angle
             x1 = random.randint(0, self.size[0])
             y1 = random.randint(0, self.size[1])
-            angle = random.randint(0, 360) * math.pi / 180
+            angle = random.randint(0, maxAngle) * math.pi / 180
             x2 = x1 + length * math.cos(angle)
             y2 = y1 + length * math.sin(angle)
             if color == -1: # mean randRGB
@@ -275,6 +283,33 @@ class Type5ImageGenerator(ImageGenerator):
         self.image.save(path)
     pass
 
+class Type7ImageGenerator(ImageGenerator):
+    '''
+    Type7 has similar label with type 8
+    '''
+    def __init__(self, fontPath, fontSize=30, size=(260, 40), bgColor = -1):
+        super(Type7ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
+    pass
+
+    def generateImage(self, strings = u'9加上叁=几', path='out.jpg'):
+        background = self.bgColor   # for next picture
+        if self.bgColor == -1:
+            background = (random.randint(240, 255), random.randint(240, 255), random.randint(240, 255))
+        self.image = Image.new('RGB', self.size, background) # image must be initialized here
+        self.randLine(num=random.randint(30, 50), length=20, color=-1, maxAngle=20)
+        x_gap = random.randint(-2, 2) + 1
+        y_gap = random.randint(-1, 1) + 4
+        x = random.randint(20, 35)
+        for i in range(0, len(strings)):
+            charcolor = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+            charImg = self.drawChar(text=strings[i], angle=0, color=charcolor)
+            y = (self.image.size[1] - charImg.size[1]) / 2 + y_gap
+            self.image.paste(charImg, (x, y), charImg)
+            #x = x + charImg.size[0] + x_gap
+            x = x + self.fontSize + x_gap   # this only works for type7
+        self.image.save(path)
+    pass
+
 class Type8ImageGenerator(ImageGenerator):
     def __init__(self, fontPath, fontSize = 22, size=(300, 50), bgColor = 255):
         super(Type8ImageGenerator, self).__init__(fontPath, fontSize, size, bgColor)
@@ -370,6 +405,8 @@ def syntheticData(args):
             # no type4 here
         elif args.type == 5 or args.type == 6:
             ig = Type5ImageGenerator(font)
+        elif args.type == 7:
+            ig = Type7ImageGenerator(font)
         elif args.type == 8:
             ig = Type8ImageGenerator(font, args.fontsize)
         elif args.type == 9:
@@ -392,6 +429,8 @@ def syntheticData(args):
                     label = randomChiSaying()
                 elif args.type == 6:
                     label = randomChiSaying('../trainpic/codec_type6.txt')
+                elif args.type == 7:
+                    label = randomType7Equation()
                 elif args.type == 8:
                     label = randomType8Equation()
                 elif args.type == 9:
