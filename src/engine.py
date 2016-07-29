@@ -45,6 +45,13 @@ def randomEquation(mode='en'):
     equation = operation(x, op, y, mode)
     return equation
 
+def randomType8Equation():
+    x = random.choice([c for c in u'0123456789〇零壹贰叁肆伍陆柒捌玖'])
+    y = random.choice([c for c in u'0123456789〇零壹贰叁肆伍陆柒捌玖'])
+    op = random.choice([u'加', u'减', u'乘', u'+', u'-', u'x', u'加上', u'减去', u'乘以'])
+    equation = x + op + y + u'等于几'
+    return equation
+
 ChiSayings = []
 def randomChiSaying(filepath):
     '''
@@ -153,12 +160,9 @@ class ImageGenerator(object):
         get a sub image with one specific character
         '''
         charImg = Image.new('RGBA', (int(self.fontSize * 1.3), int(self.fontSize * 1.3)))
-        if color == -1:
-            ImageDraw.Draw(charImg).text((0, 0), text, font=self.font, fill=self.randRGB())
-        else:
-            ImageDraw.Draw(charImg).text((0, 0), text, font=self.font, fill=color)
-        charImg = charImg.crop(charImg.getbbox())
+        ImageDraw.Draw(charImg).text((0, 0), text, font=self.font, fill=(color == -1) and self.randGRB() or color)
         charImg = charImg.rotate(angle, Image.BILINEAR, expand=1)
+        charImg = charImg.crop(charImg.getbbox())    # crop after rotation
         return charImg
     pass
 
@@ -277,19 +281,24 @@ class Type8ImageGenerator(ImageGenerator):
     pass
 
     def generateImage(self, strings = u'陆加上2等于几', path='out.jpg'):
+        offcut_x = 50
+        self.size = (self.size[0] + offcut_x * 2, self.size[1])
         background = (random.randint(200, 255), random.randint(200, 255), random.randint(200, 255))
         self.image = Image.new('RGB', self.size, background) # image must be initialized here
         lineColor = random.randint(180, 210)
         self.randLine(num=300, length=10, color=(lineColor, lineColor, lineColor))
-        gap = 2
-        x = random.randint(12, 15)
+        x = offcut_x + random.randint(18, 24)
+        y_gap = random.randint(-3, 1)
         for i in range(0, len(strings)):
             charImg = self.drawChar(text=strings[i], angle=0, color=(0, 0, 0))
-            charImg = self.italic(charImg, 0.4)
-            y = (self.image.size[1] - charImg.size[1]) / 2 - 2
+            y = (self.image.size[1] - charImg.size[1]) / 2 + y_gap
             self.image.paste(charImg, (x, y), charImg)
-            x = x + charImg.size[1] - gap
-        pass
+            x_gap = random.randint(0, 1)
+            x = x + charImg.size[0] + x_gap
+        self.image = self.italic(self.image, 0.35)
+        left = offcut_x + (self.image.size[0] - self.size[0])
+        self.size = (self.size[0] - offcut_x * 2, self.size[1])
+        self.image = self.image.crop((left, 0, left + self.size[0], self.size[1]))
         self.image.save(path)
     pass
 
@@ -328,13 +337,13 @@ class Type10ImageGenerator(ImageGenerator):
         lineColor = random.randint(100, 200)
         self.randLine(num=random.randint(20, 40), length=12, color=(lineColor, lineColor, lineColor))
         x = random.randint(10, 10)
-        gap = 14
+        gap = 12
         for i in range(0, len(strings)):
             charcolor = (random.randint(0, 200), random.randint(0, 200), random.randint(0, 200))
             charImg = self.drawChar(text=strings[i], angle=0, color=charcolor)
             y = (self.image.size[1] - charImg.size[1]) / 2 + random.randint(-10, 10)
             self.image.paste(charImg, (x, y), charImg)
-            x = x + charImg.size[0] + gap
+            x = x + charImg.size[0] + gap + random.randint(-2, 2)
         self.image.save(path)
     pass
 
@@ -384,12 +393,12 @@ def syntheticData(args):
                 elif args.type == 6:
                     label = randomChiSaying('../trainpic/codec_type6.txt')
                 elif args.type == 8:
-                    label = randomEquation()
+                    label = randomType8Equation()
                 elif args.type == 9:
                     label = randomAlphaNum()
                 elif args.type == 10:
                     label = randomChiSaying('../trainpic/chisayings.txt')
-                f.write(label.encode('utf-8')+ '\n')
+                f.write(label.encode('utf-8') + '\n')
                 filepath = os.path.join(args.savedir, fontname + str(i) + '.' + args.picformat)
                 ig.generateImage(strings=label, path=filepath)
             pass

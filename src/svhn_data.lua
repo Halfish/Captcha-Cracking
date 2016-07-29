@@ -1,5 +1,6 @@
 require 'decoder'
 require 'image'
+require 'math'
 
 local data_util = {}
 
@@ -27,7 +28,7 @@ function data_util.getFullset(name, split_rate)
     -- split data into train and validation
     local trainset = {}
     local validset = {}
-    trainset.size = fullset.size * split_rate
+    trainset.size = math.floor(fullset.size * split_rate)
     validset.size = fullset.size - trainset.size
     trainset.data = fullset.data[{{1, trainset.size}}]
     validset.data = fullset.data[{{1 + trainset.size, fullset.size}}]
