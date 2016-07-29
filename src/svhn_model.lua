@@ -123,6 +123,20 @@ function model_util.createType6()
     return model_util.create(model_config)
 end
 
+function model_util.createType8()
+    model_config = {
+        picsize = {3, 50, 300},
+        filter_num = {3, 8, 16, 32},
+        filter_size = 5,
+        dropout_value = 0.5,
+        n_full_connect = 128,
+        ndigits = 7,
+        label_size = 42
+    }
+    return model_util.create(model_config)
+end
+
+
 function model_util.createType9()
     model_config = {
         picsize = {3, 50, 150},
