@@ -171,14 +171,25 @@ function decoder_util:str2answer(expr)
     expr = string.gsub(expr, '乘以', '*')
     expr = string.gsub(expr, '乘上', '*')
     expr = string.gsub(expr, '乘', '*')
+    expr = string.gsub(expr, 'x', '*')
     expr = string.gsub(expr, '除以', '/')
     expr = string.gsub(expr, '除', '/')
+    expr = string.gsub(expr, '等于？', '')
+    expr = string.gsub(expr, '等于几', '')
     expr = string.gsub(expr, '等于', '')
+    expr = string.gsub(expr, '＝几', '')
+    expr = string.gsub(expr, '＝？', '')
+    expr = string.gsub(expr, '＝', '')
     expr = string.gsub(expr, '？', '')
+    expr = string.gsub(expr, '是多少', '')
+    expr = string.gsub(expr, '的结果', '')
     local chinum = {'零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'}
+    local chinum2 = {'〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'}
     for i = 1, 10 do
         expr = string.gsub(expr, chinum[i], i-1)
+        expr = string.gsub(expr, chinum2[i], i-1)
     end
+    print(expr)
     -- Now, the 'expr' should be like this, '15/3'
     pos = string.find(expr, '[%+-%*/]')
     if pos == nil then

@@ -49,7 +49,7 @@ def randomType7Equation():
     x = random.choice([c for c in u'0123456789〇零壹贰叁肆伍陆柒捌玖'])
     y = random.choice([c for c in u'0123456789〇零壹贰叁肆伍陆柒捌玖'])
     op = random.choice([u'加', u'减', u'加上', u'减去'])
-    equ = random.choice([u'等于几', u'等于？', u'=？', u'＝几', u'是多少', u'的结果'])
+    equ = random.choice([u'等于几', u'等于？', u'＝？', u'＝几', u'是多少', u'的结果'])
     ret = x + op + y + equ
     return ret
 

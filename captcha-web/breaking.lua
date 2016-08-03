@@ -22,12 +22,16 @@ local model2 = torch.load('../models/model_type2.t7')
 local model3 = torch.load('../models/model_type3.t7')
 local model5 = torch.load('../models/model_type5.t7')
 local model6 = torch.load('../models/model_type6.t7')
+local model7 = torch.load('../models/model_type7.t7')
+local model8 = torch.load('../models/model_type8.t7')
 local model103 = torch.load('../models/nacao6w.t7')
 model1:evaluate()
 model2:evaluate()
 model3:evaluate()
 model5:evaluate()
 model6:evaluate()
+model7:evaluate()
+model8:evaluate()
 model103:evaluate()
 
 local model23 = torch.load('../models/model_log_type23.t7')
@@ -46,6 +50,8 @@ local decoder2 = decoder_util.create('../trainpic/codec_type2.txt', 5)
 local decoder3 = decoder_util.create('../trainpic/chisayings.txt', 4)
 local decoder4 = decoder_util.create('../trainpic/codec_type6.txt', 4)
 local decoder5 = decoder_util.create('../trainpic/codec_nacao.txt', 6)
+local decoder7 = decoder_util.create('../trainpic/codec_type7.txt', 7)
+local decoder8 = decoder_util.create('../trainpic/codec_type8.txt', 7)
 
 -- loading type4 models
 local type4_provinces = {'gs', 'jx', 'nx', 'tj', 'chq', 'small', 'nacao'}
@@ -141,6 +147,10 @@ function specifyType(img)
         imgtype = index[1] + 4     -- return 2 or 3
     elseif size[1] == 3 and size[2] == 50 and size[3] == 200 then
         imgtype = 1
+    elseif size[1] == 3 and size[2] == 40 and size[3] == 260 then
+        imgtype = 7
+    elseif size[1] == 3 and size[2] == 50 and size[3] == 300 then
+        imgtype = 8
     elseif size[1] == 3 and size[2] == 27 and size[3] == 100 then
         imgtype = 103
     end
@@ -160,6 +170,10 @@ function chooseModel(img)
         model, decoder = model5, decoder2
     elseif captype == 6 then
         model, decoder = model6, decoder4
+    elseif captype == 7 then
+        model, decoder = model7, decoder7
+    elseif captype == 8 then
+        model, decoder = model8, decoder8
     elseif captype == 103 then
         model, decoder = model103, decoder5
     end
@@ -173,7 +187,7 @@ function svhn_reco(img)
     local pred_label = decoder:output2label(output)
     local expr = decoder:label2str(pred_label)
     local answer = ''
-    if captype == 1 or captype == 2 or captype == 5 then
+    if captype == 1 or captype == 2 or captype == 5 or captype == 7 or captype == 8 then
         answer = tostring(decoder:str2answer(expr))
     elseif captype == 3 or captype == 6 or captype == 103 then
         answer = expr

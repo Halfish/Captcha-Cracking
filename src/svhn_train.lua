@@ -39,6 +39,8 @@ elseif opt.type == 3 then
     decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
 elseif opt.type == 6 then
     decoder = decoder_util.create('../trainpic/codec_type6.txt', 4)
+elseif opt.type == 7 then
+    decoder = decoder_util.create('../trainpic/codec_type7.txt', 7)
 elseif opt.type == 8 then
     decoder = decoder_util.create('../trainpic/codec_type8.txt', 7)
 elseif opt.type == 9 then
@@ -95,6 +97,8 @@ if opt.model == '' then
         model = model_util.createType5()
     elseif opt.type == 6 then
         model = model_util.createType6()
+    elseif opt.type == 7 then
+        model = model_util.createType7()
     elseif opt.type == 8 then
         model = model_util.createType8()
     elseif opt.type == 9 or opt.type == 103 then

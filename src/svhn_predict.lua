@@ -23,6 +23,8 @@ elseif opt.type == 3 then
     decoder = decoder_util.create('../trainpic/chisayings.txt', 4)
 elseif opt.type == 6 then
     decoder = decoder_util.create('../trainpic/codec_type6.txt', 4)
+elseif opt.type == 7 then
+    decoder = decoder_util.create('../trainpic/codec_type7.txt', 7)
 elseif opt.type == 8 then
     decoder = decoder_util.create('../trainpic/codec_type8.txt', 7)
 elseif opt.type == 9 then
@@ -67,7 +69,7 @@ for i = 1, opt.num do
         str = decoder:simple2str_type1(file:read())
     elseif opt.type == 2 or opt.type == 5 then
         str = decoder:simple2str_type2(file:read())
-    elseif opt.type == 3 or opt.type == 6 or opt.type == 8 or opt.type == 9 then
+    elseif opt.type == 3 or opt.type == 6 or opt.type == 7 or opt.type == 8 or opt.type == 9 then
         str = file:read()
     end
     local real_label = decoder:str2label(str)

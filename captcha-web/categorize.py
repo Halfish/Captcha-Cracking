@@ -27,7 +27,8 @@ type4_mapper = {'chongqing':'chq', 'gansu':'gs', 'jiangxi':'jx', 'ningxia':'nx',
                 'shan3xi':'small', 'sichuan':'small', 'xinjiang':'small', 'beijing':'single'}
 svhn_province = ['anhui', 'guangxi', 'henan', 'heilongjiang', 'qinghai',
                  'shanxi', 'xizang', 'fujian', 'nation', 'hebei', 'shanghai',
-                 'yunnan', 'hunan', 'guangdong', 'hainan', 'neimenggu', 'nacao']
+                 'yunnan', 'hunan', 'guangdong', 'hainan', 'neimenggu', 'nacao',
+                 'guizhou', 'jilin', 'shandong']
 tess_province = ['jiangsu', 'liaoning']
 
 def crack(imgfile, province):
