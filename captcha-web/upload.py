@@ -25,7 +25,7 @@ def timing(f):
         return result
     return wrap
 
-client = redis.StrictRedis(host='localhost', port=6379, db=0, socket_timeout=3)
+client = redis.StrictRedis(host='localhost', port=6379, db=0, socket_timeout=10)
 
 from tornado.options import define, options
 define("port", default=3001, help="run on the given port", type=int)

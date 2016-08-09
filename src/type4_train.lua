@@ -17,6 +17,7 @@ cmd:option('-splitrate', 0.7, 'split rate for training and validation')
 cmd:option('-model', 'chq', 'which model to use? [chq, gs, nx, tj, jx, small, nacao, bj, hb]')
 cmd:option('-type', 'num', 'which model to use? num or symb or single')
 cmd:option('-learningRate', 0.1, 'learning rate for cnn model')
+cmd:option('-batchsize', 128, 'batch size for training and evaluating')
 cmd:option('-maxiters', 300, 'maximum iterations to train')
 cmd:option('-savefreq', 50, 'save frequency')
 cmd:text()
@@ -80,7 +81,7 @@ elseif opt.model == 'small' then
         img_size_y = 16
     end
 elseif opt.model == 'hb' then
-    channel = 3
+    channel = 1
     img_size_x = 22
     img_size_y = 40
 elseif opt.model == 'nacao' then
@@ -103,23 +104,17 @@ elseif opt.type == 'single' then
     if opt.model == 'bj' then
         decoder = decoder_util.create('../trainpic/codec_type9.txt', 1)
     elseif opt.model == 'hb' then
-        decoder = decoder_util.create('../trainpic/chisayings.txt', 1)
+        decoder = decoder_util.create('../trainpic/codec_type10.txt', 1)
     end
-    nclass = decoder.label_size + 1
+    nclass = decoder.label_size
 end
 
 local model_util = require 'type4_model'
-local model_config = {
-    picsize = {channel, img_size_x, img_size_y},
-    n_conv_layers = 2,
-    filter_num = {channel, 4, 8},
-    filter_size = 5,
-    dropout_value = 0.2,
-    n_full_connect = 128,
-    nclass = nclass
-}
-local model = model_util.create(model_config)
+local model = model_util.createType10()
 print(model)
+
+local w, dl_dw = model:getParameters()
+print('get ' .. tostring(w:size()[1]) .. ' parameters')
 
 if opt.gpuid > 0 then
     model = model:cuda()
@@ -139,16 +134,17 @@ sgd_params = {
 }
 x, dl_dx = model:getParameters()
 
-step = function(batch_size)
+step = function()
     -- step function means traverse the whole training set
     local accu = 0
     local total_loss = 0
     local count = 0
     local shuffle = torch.randperm(trainset.size)
-    batch_size = batch_size or 200
-    for t = 1, trainset.size, batch_size do
+    for t = 1, trainset.size, opt.batchsize do
+        count = count + 1
+        xlua.progress(count, math.ceil(trainset.size / opt.batchsize))
         -- setup inputs and targets for this mini-batch
-        local size = math.min(t + batch_size - 1, trainset.size) - t + 1
+        local size = math.min(t + opt.batchsize - 1, trainset.size) - t + 1
         local inputs = torch.Tensor(size, channel, img_size_x, img_size_y)
         local targets = torch.IntTensor(size)
         if opt.gpuid > 0 then
@@ -177,12 +173,11 @@ step = function(batch_size)
 
         -- fs is a table containing value of the loss function
         -- (just 1 value for the SGD optimization)
-        count = count + 1
         total_loss = total_loss + fs[1]
 
         -- accuracy for trainset
         local _, indices = torch.max(model.output, 2)
-        accu = accu + indices:int():eq(targets):sum()
+        accu = accu + indices:eq(targets):sum()
     end
 
     -- normalize loss
@@ -191,14 +186,13 @@ end
 
 -- step 4: validate
 -- evaluate the accuracy of a dataset, like validset or testset
-eval = function(validset, batch_size)
+eval = function()
     local accu = 0
     local count = 0
     local total_loss = 0
-    batch_size = batch_size or 200
-    
-    for i = 1, validset.size, batch_size do
-        local size = math.min(i + batch_size - 1, validset.size) - i + 1
+
+    for i = 1, validset.size, opt.batchsize do
+        local size = math.min(i + opt.batchsize - 1, validset.size) - i + 1
         local inputs = validset.data[{{i,i+size-1}}]
         local targets = validset.label[{{i,i+size-1}}]
         if opt.gpuid > 0 then
@@ -208,7 +202,7 @@ eval = function(validset, batch_size)
         local outputs = model:forward(inputs)
         local loss = criterion:forward(outputs, targets)
         local _, indices = torch.max(outputs, 2)
-        local guessed_right = indices:int():eq(targets):sum()
+        local guessed_right = indices:eq(targets):sum()
         accu = accu + guessed_right
         count = count + 1
         total_loss = total_loss + loss
@@ -229,7 +223,7 @@ do
         model:training()
         local loss, accu = step()
         model:evaluate()
-        local valid_loss, valid_accu = eval(validset)
+        local valid_loss, valid_accu = eval()
         print(string.format('Epoch: %d loss = %.3f,  accu=%.3f,  v_loss = %.3f,  v_accu = %.3f, costed %.3f s', 
             i, loss, accu, valid_loss, valid_accu, timer:time().real))
 
@@ -239,7 +233,7 @@ do
         end
 
         if valid_loss > last_v_loss then
-            if stopwatch >= 3 then
+            if stopwatch >= 6 then
                 if sgd_params.learningRate < stoppingLR then
                     break
                 else

@@ -22,9 +22,9 @@ def timing(f):
 
 
 type4_province = ['chongqing', 'gansu', 'jiangxi', 'ningxia', 'tianjin',
-                  'shan3xi', 'sichuan', 'xinjiang', 'beijing']
+                  'shan3xi', 'sichuan', 'xinjiang', 'beijing', 'hubei']
 type4_mapper = {'chongqing':'chq', 'gansu':'gs', 'jiangxi':'jx', 'ningxia':'nx', 'tianjin':'tj',
-                'shan3xi':'small', 'sichuan':'small', 'xinjiang':'small', 'beijing':'single'}
+                'shan3xi':'small', 'sichuan':'small', 'xinjiang':'small', 'beijing':'single','hubei':'hubei'}
 svhn_province = ['anhui', 'guangxi', 'henan', 'heilongjiang', 'qinghai',
                  'shanxi', 'xizang', 'fujian', 'nation', 'hebei', 'shanghai',
                  'yunnan', 'hunan', 'guangdong', 'hainan', 'neimenggu', 'nacao',
@@ -50,7 +50,7 @@ def type4_cut(pil_image, province):
     # cut the image and encode to base64 strings
     img = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
     mapper = {'chongqing':chq, 'gansu':gs, 'jiangxi':jx, 'ningxia':nx, 'tianjin':tj,
-              'shan3xi':small, 'sichuan':small, 'xinjiang':small, 'beijing':beijing}
+              'shan3xi':small, 'sichuan':small, 'xinjiang':small, 'beijing':beijing, 'hubei':hubei}
     patches = mapper[province](img)
     for i in range(len(patches)):
         imgstr = ''
@@ -173,6 +173,9 @@ def nacao(img):
     return adaptive
 
 def beijing(img):
+    return [img]
+
+def hubei(img):
     return [img]
 
 def tess_reco(pil_image, province):

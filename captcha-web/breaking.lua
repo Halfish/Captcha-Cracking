@@ -16,7 +16,7 @@ if opt.gpuid > 0 then
     cutorch.setDevice(opt.gpuid)
 end
 
-print('loading models from type1 to type9')
+print('loading models from type1 to type10')
 local model1 = torch.load('../models/model_type1.t7')
 local model2 = torch.load('../models/model_type2.t7')
 local model3 = torch.load('../models/model_type3.t7')
@@ -24,6 +24,7 @@ local model5 = torch.load('../models/model_type5.t7')
 local model6 = torch.load('../models/model_type6.t7')
 local model7 = torch.load('../models/model_type7.t7')
 local model8 = torch.load('../models/model_type8.t7')
+local model10 = torch.load('../models/model_type10.t7')
 local model103 = torch.load('../models/nacao6w.t7')
 model1:evaluate()
 model2:evaluate()
@@ -32,6 +33,7 @@ model5:evaluate()
 model6:evaluate()
 model7:evaluate()
 model8:evaluate()
+model10:evaluate()
 model103:evaluate()
 
 local model23 = torch.load('../models/model_log_type23.t7')
@@ -52,6 +54,7 @@ local decoder4 = decoder_util.create('../trainpic/codec_type6.txt', 4)
 local decoder5 = decoder_util.create('../trainpic/codec_nacao.txt', 6)
 local decoder7 = decoder_util.create('../trainpic/codec_type7.txt', 7)
 local decoder8 = decoder_util.create('../trainpic/codec_type8.txt', 7)
+local decoder10 = decoder_util.create('../trainpic/codec_type10.txt', 4)
 
 -- loading type4 models
 local type4_provinces = {'gs', 'jx', 'nx', 'tj', 'chq', 'small', 'nacao'}
@@ -213,6 +216,51 @@ function single_reco(img)
     return cjson.encode(jsonstring)
 end
 
+function get_validstr()
+    local file = io.open('../trainpic/chisayings.txt')
+    local str = file:read("*all")
+    file:close()
+    str = string.split(str, '\n')
+    local validstr = {}
+    for i = 1, #str do
+        local label = decoder10:str2label(str[i])
+        local flag = true
+        for j = 1, 4 do if label[j + 1] == -1 then flag = false end end
+        if flag then table.insert(validstr, str[i]) end
+    end
+    return validstr
+end
+local chisaying_type10 = get_validstr()
+
+function hubei_reco(img)
+    img = image.rgb2y(img)      -- intend to convert from RGB to gray
+    local input = torch.Tensor(4, 1, 40, 22):typeAs(img)
+    local start = {8, 46, 82, 120}
+    for i = 1, 4 do
+        sub = img[{{}, {1, 40}, {start[i] + 1, start[i] + 22}}]
+        sub[sub:lt(200.0 / 255)] = 0
+        sub[sub:ge(200.0 / 255)] = 1
+        input[i] = sub - sub:mean()
+    end
+    if opt.gpuid > 0 then input = input:cuda() end
+    local output = model10:forward(input)
+    local k = 10
+    local _, index = output:topk(k, 2, true) -- top 10 candidates, sorted reversely
+    local best_score = 0
+    local best_str = ''
+    for i = 1, #chisaying_type10 do
+        local label = decoder10:str2label(chisaying_type10[i])[{{2, 5}}]
+        label = label:resize(4, 1):expand(4, k):cuda()
+        local score = index:eq(label):sum()
+        if score > best_score then
+            best_score = score
+            best_str = chisaying_type10[i]
+        end
+    end
+    local jsonstring = {expr=best_str, answer=best_str, valid=true, accu=50}
+    return cjson.encode(jsonstring)
+end
+
 function handle_message(message)
     local id = message['id']
     local which_model = message['type']
@@ -240,6 +288,8 @@ function handle_message(message)
     elseif which_model == 'type4' then
         if province == 'single' then
             ok, result = pcall(single_reco, imgs[1])
+        elseif province == 'hubei' then
+            ok, result = pcall(hubei_reco, imgs[1])
         else
             ok, result = pcall(type4_reco, imgs, province)
         end

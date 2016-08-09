@@ -77,6 +77,7 @@ end
 function decoder_util.get_mapper(filename)
     local file = io.open(filename, 'r')
     local str = file:read('*all')
+    file:close()
     str = string.gsub(str, '\n', '')
     local vocab = decoder_util.str2vocab(str)
     local mapper = {}

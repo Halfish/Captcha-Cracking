@@ -80,7 +80,7 @@ model_config = {
     filter_num = {3, 8, 16, 32},
     filter_size = 5,
     dropout_value = opt.dropout,
-    n_full_connect = 1024,
+    n_full_connect = 128,
     ndigits = decoder.ndigits,
     label_size = decoder.label_size,
 }
