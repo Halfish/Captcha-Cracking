@@ -254,7 +254,7 @@ for i = 1, opt.max_epochs do
 
     -- cut the learning rate in half when valid_loss stops decreasing
     if valid_loss > last_v_loss then
-        if stopwatch >= 3 then
+        if stopwatch >= 8 then
             if sgd_params.learningRate < stoppingLR then
                 print('early stopping, saving model...')
                 torch.save(opt.savename, model)
