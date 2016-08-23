@@ -1,19 +1,19 @@
 ## Captcha-Cracking Program Using Torch
 
-This is a program aiming to crack some CAPTCHA on several website, which may
-include both traditional method as well as deep learning method.
+This is a program aiming to crack some CAPTCHA of several websites, which may
+include both traditional and deep learning method.
 
 **1. Traditional Methods**
 
 By traditional methods, we firstly need to preprocess the image like removing noises
 in the background, and do the slant correction if the character have some rotated angles.
-Then, cut out each single characters and train a classifier to recognize them.
+Then just cut out each single characters and train a classifier to recognize them.
 
 **2. Deep Learning Methods**
 
 In this program, we mainly use a Convolutional Neural Network model developed by Google,
-which was firstly desigined to extract street view house number(SVHN) from Google Map.
-Click here to read the origin article.
+which was slightly different from LeNet-5, and was firstly desigined to extract 
+street view house number(SVHN) from Google Map.Click here to read the origin article.
 [Multi-digi Number Recognition from Street View Imagery using Deep Convolutional Neural Networks](http://arxiv.org/abs/1312.6082)
 
 ## About Torch7 & OpenCV
@@ -54,9 +54,9 @@ nohup th breaking.lua -gpuid 1 & > loglua.txt
 ```
 
 ## Model A: SVHN Model
-When cracking type1 to type6 CAPTCHA, our model is always prefixed with svhn, 
-which we have already explained what is SVHN up there, because this model is used to recognize SVHN at first.
-The details are listed as following.
+When cracking type1 to type10 CAPTCHA, our model is always prefixed with svhn, 
+which we have already explained up there.
+Follow the following steps to manually train a CAPTCHA recognizer.
 
 Step 0: Go to the ./src/ sub derectory
 ```shell
